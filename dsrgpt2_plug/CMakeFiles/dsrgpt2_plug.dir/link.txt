@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/c++  -march=native -bundle -Wl,-headerpad_max_install_names -undefined dynamic_lookup -o dsrgpt2_plug.so CMakeFiles/dsrgpt2_plug.dir/plugin.cc.o -Wl,-rpath,/Users/shuhe.wang/src/psi4_debug_install/lib/psi4 /Users/shuhe.wang/src/psi4_debug_install/lib/psi4/core.so -undefined dynamic_lookup 
