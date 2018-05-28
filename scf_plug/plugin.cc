@@ -37,6 +37,8 @@
 #include "psi4/libmints/factory.h"
 #include "psi4/libmints/mintshelper.h"
 #include "psi4/libmints/basisset.h"
+#include "psi4/libmints/integral.h"
+#include "psi4/libmints/dipole.h"
 #include "psi4/libpsio/psio.hpp"
 #include <math.h>
 #include <iomanip>
@@ -108,11 +110,29 @@ double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, i
     return Elec;
 }
 
+void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
+
+    std::shared_ptr<BasisSet> basisset = wfn->basisset();
+    std::shared_ptr<IntegralFactory> ints_fac = std::make_shared<IntegralFactory>(basisset);
+    int nbf = basisset->nbf();
+
+    std::vector<SharedMatrix> AOdipole_ints_;
+    // AOdipole_ints_.clear();
+    for (const std::string& direction : {"X", "Y", "Z"}) {
+        std::string name = "AO Dipole " + direction;
+        AOdipole_ints_.push_back(SharedMatrix(new Matrix(name, nbf, nbf)));
+    }
+    std::shared_ptr<OneBodyAOInt> aodOBI(ints_fac->ao_dipole());
+    aodOBI->compute(AOdipole_ints_);
+    Dp->copy(AOdipole_ints_[2]);
+}
+
 extern "C"
 SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 {
 
 //Parameters Declaration
+
     std::shared_ptr<Molecule> molecule = Process::environment.molecule();
     molecule->update_geometry();
     molecule->print();
@@ -120,16 +140,16 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     std::shared_ptr<BasisSet> ao_basisset=ref_wfn->basisset();
     MintsHelper mints(ref_wfn);
 
-    int print = options.get_int("PRINT");
-    double cvg = options.get_double("CVG");
-    int dims[]={ao_basisset->nbf()};
-    double CVG = options.get_double("CVG");
-    int iternum = 1;
-    double energy_pre;
-    int doccpi = 0;
-    double Enuc = molecule->nuclear_repulsion_energy();
-    double Elec, Etot;
-    int irrep_num = ref_wfn->nirrep();
+    int      print = options.get_int("PRINT");
+    double   cvg = options.get_double("CVG");
+    int      dims[]={ao_basisset->nbf()};
+    double   CVG = options.get_double("CVG");
+    int      iternum = 1;
+    double   energy_pre;
+    int      doccpi = 0;
+    double   Enuc = molecule->nuclear_repulsion_energy();
+    double   Elec, Etot;
+    int      irrep_num = ref_wfn->nirrep();
 
     std::shared_ptr<MatrixFactory> factory(new MatrixFactory);
     factory->init_with(1,dims,dims);
@@ -144,9 +164,15 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix S (new Matrix("S matrix", 1, dims, dims, 0));
     SharedMatrix H = factory->create_shared_matrix("H");
     SharedMatrix eri = mints.ao_eri();
+
+    SharedMatrix Dp (new Matrix("Dipole correction matrix", 1, dims, dims, 0));
+
     SharedMatrix evecs (new Matrix("evecs", 1, dims, dims, 0));
     SharedVector evals (new Vector("evals", 1, dims));
 
+    SharedVector ndip = DipoleInt::nuclear_contribution(Process::environment.molecule(), Vector3(0.0, 0.0, 0.0));
+        
+    Enuc += 0.001 * ndip->get(0,2);
 
     Dimension doccpi_add = ref_wfn->doccpi();
 
@@ -157,8 +183,13 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     std::cout<<std::endl;
 
 //Create H matrix
+
     H->copy(kinetic);
     H->add(potential);
+
+    build_AOdipole_ints(ref_wfn, Dp);
+    Dp->Matrix::scale(0.001);
+    H->add(Dp);
 
 //Create S^(-1/2) Matrix
 
