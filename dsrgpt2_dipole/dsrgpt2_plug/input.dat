@@ -36,7 +36,7 @@ dm_z_5point = (8.0*energies[0] - 8.0*energies[1] - energies[2] + energies[3]) / 
 
 set perturb_h false
 # Compute the analytic dipoles, for comparison
-e,wfn = energy('scf', return_wfn=True)
+e,wfn = energy('dsrgpt2_plug', return_wfn=True)
 oeprop(wfn, "MULTIPOLES(1)")
 analytic = get_variable("DIPOLE Z")
 
