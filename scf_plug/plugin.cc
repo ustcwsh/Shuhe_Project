@@ -187,7 +187,6 @@ double MP2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi){
             }
         }
     }
-
     return(Emp2);
 }
 
@@ -250,21 +249,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix H = factory->create_shared_matrix("H");
     SharedMatrix eri = mints.ao_eri();
 
-
-
-
-
-
     SharedMatrix eri_mo = eri->clone();
     eri_mo->zero();
-
-
-
-
-
-
-
-
 
     SharedMatrix Dp (new Matrix("Dipole correction matrix", 1, dims, dims, 0));
 
