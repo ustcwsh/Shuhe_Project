@@ -52,6 +52,7 @@ int read_options(std::string name, Options& options)
     if (name == "SCF_PLUG"|| options.read_globals()) {
         options.add_int("PRINT", 1);
         options.add_double("CVG", 1);
+        options.add_double("PERT", 1);
     }
 
     return true;
@@ -110,6 +111,88 @@ double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, i
     return Elec;
 }
 
+void AO2MO_TwoElecInts(SharedMatrix eri, SharedMatrix eri_mo, SharedMatrix C, int dim ){
+
+    for(int i=0; i<dim; ++i){
+
+        for(int j=0; j<dim; ++j){
+
+            for(int k=0; k<dim; ++k){
+
+                for(int l=0; l<dim; ++l){
+
+                    double ints_temp = 0.0;
+
+                    for(int p=0; p<dim; ++p){
+
+                        for(int q=0; q<dim; ++q){
+
+                            for(int r=0; r<dim; ++r){
+
+                                for(int s=0; s<dim; ++s){
+
+                                    ints_temp +=  eri->get(0, p*dim+q, r*dim+s) * C->get(0,s,l) * C->get(0,r,k) * C->get(0,q,j) * C->get(0,p,i);
+
+                                }
+                            }
+                        }
+                    }
+
+                    eri_mo->set(0, i*dim+j, k*dim+l, ints_temp);
+
+                }
+            }
+        }
+    }
+}
+
+void AO2MO_FockMatrix(SharedMatrix F, SharedMatrix F_MO, SharedMatrix C, int dim){
+
+    for(int i=0; i<dim; ++i){
+
+        for(int j=0; j<dim; ++j){
+
+            double ints_temp = 0.0;
+
+            for(int p=0; p<dim; ++p){
+
+                for(int q=0; q<dim; ++q){
+
+                    ints_temp += F->get(0, p, q) * C->get(0, p, i) * C->get(0, q, j);
+
+                }
+            }
+
+            F_MO->set(0, i, j, ints_temp);
+
+        }
+    }
+}
+
+double MP2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi){
+
+    double Emp2 = 0.0;
+
+    for(int i=0; i<doccpi; ++i){
+
+        for(int j=0; j<doccpi; ++j){
+
+            for(int a=doccpi; a<dim; ++a){
+
+                for(int b=doccpi; b<dim; ++b){
+
+                    Emp2 += eri_mo->get(0, i*dim+a, j*dim+b) * ( 2.0 * eri_mo->get(0, i*dim+a, j*dim+b) - eri_mo->get(0, i*dim+b, j*dim+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b));
+
+                }
+            }
+        }
+    }
+
+    return(Emp2);
+}
+
+
+
 void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
 
     std::shared_ptr<BasisSet> basisset = wfn->basisset();
@@ -141,15 +224,16 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     MintsHelper mints(ref_wfn);
 
     int      print = options.get_int("PRINT");
-    double   cvg = options.get_double("CVG");
     int      dims[]={ao_basisset->nbf()};
     double   CVG = options.get_double("CVG");
+    double   pert = options.get_double("PERT");
     int      iternum = 1;
     double   energy_pre;
     int      doccpi = 0;
     double   Enuc = molecule->nuclear_repulsion_energy();
-    double   Elec, Etot;
+    double   Elec, Etot, Emp2 = 0.0;
     int      irrep_num = ref_wfn->nirrep();
+
 
     std::shared_ptr<MatrixFactory> factory(new MatrixFactory);
     factory->init_with(1,dims,dims);
@@ -159,11 +243,28 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix potential = mints.ao_potential();
 	SharedMatrix Omega = factory->create_shared_matrix("Omega");
     SharedMatrix F (new Matrix("Fock matrix", 1, dims, dims, 0));
+    SharedMatrix F_MO (new Matrix("Fock_MO matrix", 1, dims, dims, 0));
     SharedMatrix C (new Matrix("C matrix", 1, dims, dims, 0));
     SharedMatrix D (new Matrix("Density matrix", 1, dims, dims, 0));
     SharedMatrix S (new Matrix("S matrix", 1, dims, dims, 0));
     SharedMatrix H = factory->create_shared_matrix("H");
     SharedMatrix eri = mints.ao_eri();
+
+
+
+
+
+
+    SharedMatrix eri_mo = eri->clone();
+    eri_mo->zero();
+
+
+
+
+
+
+
+
 
     SharedMatrix Dp (new Matrix("Dipole correction matrix", 1, dims, dims, 0));
 
@@ -172,7 +273,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 
     SharedVector ndip = DipoleInt::nuclear_contribution(Process::environment.molecule(), Vector3(0.0, 0.0, 0.0));
         
-    Enuc += 0.001 * ndip->get(0,2);
+    Enuc += pert * ndip->get(0,2);
 
     Dimension doccpi_add = ref_wfn->doccpi();
 
@@ -182,13 +283,16 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 
     std::cout<<std::endl;
 
+
+/************************ SCF ************************/
+
 //Create H matrix
 
     H->copy(kinetic);
     H->add(potential);
 
     build_AOdipole_ints(ref_wfn, Dp);
-    Dp->Matrix::scale(0.001);
+    Dp->Matrix::scale(pert);
     H->add(Dp);
 
 //Create S^(-1/2) Matrix
@@ -249,11 +353,34 @@ while( fabs(energy_pre - Etot) > CVG){
 
     iternum++;
 }
+
+/************************ MP2 ************************/
+
+
+    AO2MO_TwoElecInts(eri, eri_mo, C, dims[0]);
+
+    AO2MO_FockMatrix(F, F_MO, C, dims[0]);
+
+    Emp2 = MP2_Energy(eri_mo, F_MO, dims[0], doccpi);
+    Etot += Emp2;
+
+
+/****** test ********/
+
+
+    C->print();
+
+
+/****** test ********/    
+
+
+
 //Output
 	std::cout<<"Energy precision:             "<< std::setprecision(15)<< CVG<< std::endl<< std::endl;
 	std::cout<<"Iteration times:              "<< iternum<< std::endl;
     std::cout<<"Nuclear repulsion energy:     "<< std::setprecision(15)<< Enuc<< std::endl;
     std::cout<<"Electronic energy:            "<< std::setprecision(15)<< Elec<< std::endl;
+    std::cout<<"MP2 energy:                   "<< std::setprecision(15)<< Emp2<< std::endl;
     std::cout<<"Total energy:                 "<< std::setprecision(15)<< Etot<< std::endl<< std::endl;
 
     return ref_wfn;
