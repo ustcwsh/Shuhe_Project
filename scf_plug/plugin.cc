@@ -44,6 +44,9 @@
 #include <iomanip>
 #include <vector>
 
+double e=2.718281828;
+
+
 namespace psi{ namespace scf_plug {
 
 extern "C"
@@ -53,6 +56,7 @@ int read_options(std::string name, Options& options)
         options.add_int("PRINT", 1);
         options.add_double("CVG", 1);
         options.add_double("PERT", 1);
+        options.add_double("S", 1);
     }
 
     return true;
@@ -190,6 +194,26 @@ double MP2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi){
     return(Emp2);
 }
 
+double DSRG_PT2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi, double S){
+
+    double Edsrg_pt2 = 0.0;
+
+    for(int i=0; i<doccpi; ++i){
+
+        for(int j=0; j<doccpi; ++j){
+
+            for(int a=doccpi; a<dim; ++a){
+
+                for(int b=doccpi; b<dim; ++b){
+
+                    Edsrg_pt2 += eri_mo->get(0, i*dim+a, j*dim+b) * ( 2.0 * eri_mo->get(0, i*dim+a, j*dim+b) - eri_mo->get(0, i*dim+b, j*dim+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)) * ( 1 - pow(e,(-2.0 * S * (F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)) * (F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)))));
+
+                }
+            }
+        }
+    }
+    return(Edsrg_pt2);
+}
 
 
 void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
@@ -226,12 +250,14 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     int      dims[]={ao_basisset->nbf()};
     double   CVG = options.get_double("CVG");
     double   pert = options.get_double("PERT");
+    double   S_const = options.get_double("S");
     int      iternum = 1;
     double   energy_pre;
     int      doccpi = 0;
     double   Enuc = molecule->nuclear_repulsion_energy();
-    double   Elec, Etot, Emp2 = 0.0;
+    double   Elec, Etot, Emp2, Edsrg_pt2;
     int      irrep_num = ref_wfn->nirrep();
+
 
 
     std::shared_ptr<MatrixFactory> factory(new MatrixFactory);
@@ -339,7 +365,7 @@ while( fabs(energy_pre - Etot) > CVG){
 
     iternum++;
 }
-
+    double Escf = Etot;
 /************************ MP2 ************************/
 
 
@@ -348,6 +374,9 @@ while( fabs(energy_pre - Etot) > CVG){
     AO2MO_FockMatrix(F, F_MO, C, dims[0]);
 
     Emp2 = MP2_Energy(eri_mo, F_MO, dims[0], doccpi);
+
+    Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, dims[0], doccpi, S_const);
+
     Etot += Emp2;
 
 
@@ -362,12 +391,14 @@ while( fabs(energy_pre - Etot) > CVG){
 
 
 //Output
-	std::cout<<"Energy precision:             "<< std::setprecision(15)<< CVG<< std::endl<< std::endl;
+	std::cout<<"Energy precision(SCF Iter):   "<< std::setprecision(15)<< CVG<< std::endl<< std::endl;
 	std::cout<<"Iteration times:              "<< iternum<< std::endl;
     std::cout<<"Nuclear repulsion energy:     "<< std::setprecision(15)<< Enuc<< std::endl;
     std::cout<<"Electronic energy:            "<< std::setprecision(15)<< Elec<< std::endl;
+    std::cout<<"SCF energy:                   "<< std::setprecision(15)<< Escf<< std::endl;
     std::cout<<"MP2 energy:                   "<< std::setprecision(15)<< Emp2<< std::endl;
-    std::cout<<"Total energy:                 "<< std::setprecision(15)<< Etot<< std::endl<< std::endl;
+    std::cout<<"DSRG-PT2 energy:              "<< std::setprecision(15)<< Edsrg_pt2<< std::endl;
+    std::cout<<"Total energy(MP2):            "<< std::setprecision(15)<< Etot<< std::endl<< std::endl;
 
     return ref_wfn;
 }

@@ -1,0 +1,39 @@
+
+
+# PYTHONPATH must include directory above plugin directory.
+#     Define either externally or here, then import plugin.
+sys.path.insert(0, './..')
+import scf_plug
+
+
+
+molecule h2o {
+0 1
+O
+H 1 r
+H 1 r 2 a
+
+r=0.98944
+a=100.047
+}
+
+set {
+  basis sto-3g
+ scf_type pk
+ mp2_type conv
+}
+
+set scf_plug {
+  print 1
+  cvg   1.0e-12
+  pert  0.00
+  s     1.8
+}
+
+energy('scf_plug')
+Emp2= energy('mp2')
+Escf= energy('scf')
+
+print Escf
+print Emp2
+scf_plug.exampleFN()
