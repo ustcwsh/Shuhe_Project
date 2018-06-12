@@ -1,0 +1,76 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\section{The energy expression to first order}
+$$\hat{H}=e^{-A}He^{A}=H_0^{(1)}+[H,A_1^{(1)}]+\frac{1}{2}[[H^{(0)},A_1^{(1)}],A_1^{(1)}]$$
+
+\subsection{$H_0^{(1)}$}
+$$H_0=\sum_{pq}h^q_p\{p^\dagger q\}=\sum_{pq}h_p^q\delta_{pq}\delta_{pi}=\sum_ih_i^i$$
+$$H_0^{(1)}=0$$
+
+\subsection{$[H,A_1^{(1)}]$}
+$$[H,A_1^{(1)}]=[H,T_1^{(1)}]-[H,{T_1^{(1)}}^\dagger]=[H,T_1^{(1)}]+[H,T_1^{(1)}]^\dagger$$
+$$[H,T_1^{(1)}]=HT_1^{(1)}-T_1^{(1)}H$$
+$$HT_1^{(1)}=\sum_{pqia}f^q_pt^a_i\{p^\dagger q\}\{a^\dagger i\}=\sum_{pqia}f^q_pt^a_i(\{p^\dagger q a^\dagger i\}+\delta_{pi}\{qa^\dagger\}+\delta_{qa}\{p^\dagger i\}+\delta_{pi}\delta_{qa})$$
+$$T_1^{(1)}H=\sum_{pqia}f^q_pt^a_i\{a^\dagger i\}\{p^\dagger q\}=\sum_{pqia}f^q_pt_i^a\{p^\dagger q a^\dagger i\}$$
+\quad Only remaining the fully-contracted terms,
+$$[H,T_1^{(1)}]=HT_1^{(1)}-T_1^{(1)}H=\sum_{ia}f_i^at^a_i$$
+\quad It finally yields that
+$$[H,A_1^{(1)}]=[H,T_1^{(1)}]+[H,T_1^{(1)}]^\dagger=2\sum_{ia}f_i^at_i^a$$
+
+ \subsection{$[[H^{(0)},A_1^{(1)}],A_1^{(1)}]$}
+ \quad Similarly following the previous deduction but remaining single-excitation terms,
+ $$X=[H^{(0)},A_1^{(1)}]=\sum_{ia}(f_a^a-f_i^i)(t^a_i\{a^\dagger i\}+t_a^i\{i^\dagger a\})$$
+$$ XT_1^{(1)}=\sum_{ijab}\Delta_a^it_a^it^b_j\{i^\dagger a\}\{b^\dagger j\}=-\sum_{ia}\Delta_a^it^i_at^a_i$$
+$${T_1^{(1)}}^\dagger X=-\sum_{ia}\Delta_a^it_i^at_a^i$$
+$$T_1^{(1)}X=X{T_1^{(1)}}^\dagger=0$$
+\quad where $\Delta_a^i=f^i_i-f_a^a$ and $H^{(0)}=\sum f_p^p \{p^\dagger p\}$. Finally, it can be obtained that
+ $$[[H^{(0)},A_1^{(1)}],A_1^{(1)}]=[X,A_1^{(1)}]=-2\sum_{ia}\Delta_a^i(t_i^a)^2$$
+ 
+  \subsection{$\hat{H}$ and the energy expression}
+$$\hat{H}=e^{-A}He^{A}=H_0^{(1)}+[H,A_1^{(1)}]+\frac{1}{2}[[H^{(0)},A_1^{(1)}],A_1^{(1)}]$$
+$$\hat{H}=\sum_{ia}[2f^a_it^a_i-\Delta_a^i(t_i^a)^2]$$
+\quad Applying the amplitude condition that
+$$t_a^i=\frac{f_a^i(1-e^{-s{\Delta^i_a}^2})}{{\Delta^i_a}}$$
+\quad It can be obtained that
+$$E=\sum_{ia}[2f^a_it^a_i-\Delta_a^i(t_i^a)^2]=\sum_{ia}\frac{(f_a^i)^2(1-e^{-2s{\Delta^i_a}^2})}{{\Delta^i_a}}$$
+
+\section{The derivative of energy}
+$$A=A_1^{(1)}$$
+$$t_a^i=\frac{f_a^i(1-e^{-s{\Delta^i_a}^2})}{{\Delta^i_a}}$$
+$$E=\sum_{ia}\frac{(f_a^i)^2(1-e^{-2s{\Delta^i_a}^2})}{{\Delta^i_a}}=\sum_{ia}f^i_at^i_a(1+e^{-s{\Delta^i_a}^2})$$
+\quad The Lagrangian can be written using the amplitude condition,
+$$L(\{t^i_a,f^i_a\})=\sum_{ia}[2f^a_it^a_i-\Delta_a^i(t_i^a)^2]+\sum_{ia}\lambda^i_a[t^i_a{\Delta^i_a}-f^i_a(1-e^{-s{\Delta^i_a}^2})] $$
+\quad We can obtain the value of $\lambda_a^i$ by differentiating $L$ to $t_a^i$,
+$$\frac{\partial L}{\partial t^i_a}=2f^i_a-2\Delta^i_at^i_a+\lambda_a^i{\Delta^i_a}=0$$
+$$\lambda^i_a=2(t_a^i-\frac{f^i_a}{\Delta_a^i})$$
+$$L=\sum_{ia}\Delta_a^i(t^i_a)^2+2(\frac{{f^i_a}^2}{\Delta_a^i}-f^i_at^i_a)(1-e^{-s{\Delta^i_a}^2})$$
+\quad Finally, the Lagrangian and its derivative can be yielded,
+$$L=\sum_{ia}\frac{{f_a^i}^2(1-e^{-2s{\Delta^i_a}^2})}{{\Delta^i_a}}$$
+$$\frac{\partial L}{\partial f^p_q}=\frac{2f_a^i(1-e^{-2s{\Delta^i_a}^2})}{{\Delta^i_a}}\delta_{pi}\delta_{qa}+\frac{{f^i_a}^2}{{\Delta^i_a}^2}(4s{\Delta^i_a} e^{-2s{\Delta^i_a}^2}+e^{-2s{\Delta^i_a}^2}-1)(\delta_{pq}\delta_{pi}-\delta_{pq}\delta_{pa})$$
+
+\section{The derivative considering electric field}
+$$\tilde{H}=H+\lambda\mu=h^q_p\{p^\dagger q\}+\frac{1}{4}V_{pq}^{rs}\{p^\dagger q^\dagger sr\}+\lambda\mu_p^q\{p^\dagger q\}$$
+$$E=<\Psi_0|e^{-T}\tilde{H}e^T|\Psi_0>=<\Psi_0|\tilde{H}+[\tilde{H},A^{(1)}]+\frac{1}{2}[[{\tilde{H}}^{(0)},A^{(1)}],A^{(1)}]|\Psi_0>$$
+
+
+
+\subsection{Orbital irrelevant}
+\quad For the simplest case when $H$ is irrelevant to external perturbation $\lambda$, the derivative of energy to $\lambda$ can be written as
+$$\frac{\partial E}{\partial \lambda}|_{\lambda=0}=<\Psi_0|e^{-T}\frac{\partial\tilde{H}}{\partial \lambda}e^T|\Psi_0>$$
+\quad Considering the orbital irrelevant condition, the derivative of $\tilde{H}$ is
+$$\frac{\partial \tilde{H}}{\partial \lambda}|_{\lambda=0}=\frac{\partial H}{\partial \lambda}+\mu+\lambda \frac{\partial \mu}{\partial \lambda}=\mu$$
+\quad So we have
+$$\mu=\frac{\partial E}{\partial \lambda}|_{\lambda=0}=<\Psi_0|\mu+[\mu,A^{(1)}]+\frac{1}{2}[[{\mu}^{(0)},A^{(1)}],A^{(1)}]|\Psi_0>$$
+Following the same procedure in \textbf{1} and referring to the result in \textbf{1.4}, it can be yielded that
+$$\mu=\sum_{ia}\frac{(\mu_a^i)^2(1-e^{-2s{\Lambda^i_a}^2})}{{\Lambda^i_a}}$$
+\quad where $\Lambda_a^i=\mu^i_i-\mu_a^a$ 
+
+
+\subsection{Orbital relevant}
+$$\frac{\partial \tilde{H}}{\partial \lambda}|_{\lambda=0}=\frac{\partial H}{\partial \lambda}+\mu+\lambda \frac{\partial \mu}{\partial \lambda}=\frac{\partial H}{\partial \lambda}+\mu$$
+
+\end{document}
+
+
