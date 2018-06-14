@@ -490,6 +490,32 @@ while( fabs(energy_pre - Etot) > CVG){
     }
 
 
+    SharedMatrix D_1 (new Matrix("Density matrix", 1, dims, dims, 0));
+    D_1->zero();
+
+    for(int i=0; i<doccpi; ++i){
+        for(int j=0; j<doccpi; ++j){
+            for(int a=doccpi; a<dims[0]; ++a){
+                for(int b=doccpi; b<dims[0]; ++b){
+
+                    D_1->add(0,i,i, -0.5 *2.0* (eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) * ( 2.0 * eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) - eri_mo->get(0, i*dims[0]+b, j*dims[0]+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))));
+                    
+                     D_1->add(0,a,a, 0.5 *2.0* (eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) * ( 2.0 * eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) - eri_mo->get(0, i*dims[0]+b, j*dims[0]+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))));
+
+
+                }
+            }
+        }
+    }
+
+    double d_1_test = 0.0;
+    for(int i=0; i<dims[0]; ++i){
+
+        d_1_test += 2*D_1->get(0,i,i)*Dp_mo->get(0,i,i);
+    }
+
+D_1->print();
+
 
 
 
@@ -553,6 +579,7 @@ F_uptp->print();
     // std::cout<<"dpele:   "<< std::setprecision(15)<< dp_elec +ndip->get(0,2) << std::endl<< std::endl;
     //     std::cout<<"dpe1:   "<< std::setprecision(15)<< dp_fp << std::endl<< std::endl;
     std::cout<<"dp test:                   "<< std::setprecision(15)<< dp_theo<< std::endl;
+       std::cout<<"dp test1:                   "<< std::setprecision(15)<< d_1_test<< std::endl;
 
     return ref_wfn;
 }
