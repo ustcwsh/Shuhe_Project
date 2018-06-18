@@ -62,15 +62,18 @@ int read_options(std::string name, Options& options)
     return true;
 }
 
-void FormDensityMatrix(SharedMatrix D, SharedMatrix C, int dim, int occ){
+
+
+
+void FormDensityMatrix(SharedMatrix D, SharedMatrix C, int nmo, int occ){
 
     D->zero();
 
-    for(int i=0; i<dim; ++i){
+    for(int i = 0; i < nmo; ++i){
 
-		for(int j=0; j<dim; ++j){
+		for(int j = 0; j < nmo; ++j){
 
-			for(int k=0; k<occ; ++k){
+			for(int k = 0; k < occ; ++k){
 
 				D->add(0, i, j, C->get(0, i, k) * C->get(0, j, k));
 
@@ -79,19 +82,19 @@ void FormDensityMatrix(SharedMatrix D, SharedMatrix C, int dim, int occ){
 	}
 }
 
-void FormNewFockMatrix(SharedMatrix F, SharedMatrix H, SharedMatrix D, SharedMatrix eri, int dim){
+void FormNewFockMatrix(SharedMatrix F, SharedMatrix H, SharedMatrix D, SharedMatrix eri, int nmo){
 
-    for(int p=0; p<dim; ++p){
+    for(int p = 0; p < nmo; ++p){
 
-    	for(int q=0; q<dim; ++q){
+    	for(int q = 0; q < nmo; ++q){
 
     		F->set(0, p, q, H->get(0, p, q));
 
-    		for(int r=0; r<dim; ++r){
+    		for(int r = 0; r < nmo; ++r){
 
-    			for(int s=0; s<dim; ++s){
+    			for(int s = 0; s < nmo; ++s){
 
-    				F->add(0, p, q, D->get(0, r, s) * (2.0*eri->get(0, p*dim+q, r*dim+s) - eri->get(0, p*dim+r, q*dim+s)));
+    				F->add(0, p, q, D->get(0, r, s) * (2.0*eri->get(0, p * nmo + q, r * nmo + s) - eri->get(0, p * nmo + r, q * nmo + s)));
 
     			}
     		}
@@ -99,15 +102,15 @@ void FormNewFockMatrix(SharedMatrix F, SharedMatrix H, SharedMatrix D, SharedMat
     }
 }
 
-double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, int dim){
+double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, int nmo){
 
     Elec = 0;
 
-    for(int p=0; p<dim; ++p){
+    for(int p = 0; p < nmo; ++p){
 
-    	for(int q=0; q<dim; ++q){
+    	for(int q = 0; q < nmo; ++q){
 
-    		Elec+= D->get(0, p, q)*(H->get(0, p, q)+F->get(0, p, q));
+    		Elec += D->get(0, p, q)*(H->get(0, p, q)+F->get(0, p, q));
 
     	}
     }
@@ -115,34 +118,34 @@ double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, i
     return Elec;
 }
 
-void AO2MO_TwoElecInts(SharedMatrix eri, SharedMatrix eri_mo, SharedMatrix C, int dim ){
+void AO2MO_TwoElecInts(SharedMatrix eri, SharedMatrix eri_mo, SharedMatrix C, int nmo ){
 
-    for(int i=0; i<dim; ++i){
+    for(int i = 0; i < nmo; ++i){
 
-        for(int j=0; j<dim; ++j){
+        for(int j = 0; j < nmo; ++j){
 
-            for(int k=0; k<dim; ++k){
+            for(int k = 0; k < nmo; ++k){
 
-                for(int l=0; l<dim; ++l){
+                for(int l = 0; l < nmo; ++l){
 
                     double ints_temp = 0.0;
 
-                    for(int p=0; p<dim; ++p){
+                    for(int p = 0; p < nmo; ++p){
 
-                        for(int q=0; q<dim; ++q){
+                        for(int q = 0; q < nmo; ++q){
 
-                            for(int r=0; r<dim; ++r){
+                            for(int r = 0; r < nmo; ++r){
 
-                                for(int s=0; s<dim; ++s){
+                                for(int s = 0; s < nmo; ++s){
 
-                                    ints_temp +=  eri->get(0, p*dim+q, r*dim+s) * C->get(0,s,l) * C->get(0,r,k) * C->get(0,q,j) * C->get(0,p,i);
+                                    ints_temp +=  eri->get(0, p * nmo + q, r * nmo + s) * C->get(0, s, l) * C->get(0, r, k) * C->get(0, q, j) * C->get(0, p, i);
 
                                 }
                             }
                         }
                     }
 
-                    eri_mo->set(0, i*dim+j, k*dim+l, ints_temp);
+                    eri_mo->set(0, i * nmo + j, k * nmo + l, ints_temp);
 
                 }
             }
@@ -150,17 +153,17 @@ void AO2MO_TwoElecInts(SharedMatrix eri, SharedMatrix eri_mo, SharedMatrix C, in
     }
 }
 
-void AO2MO_FockMatrix(SharedMatrix F, SharedMatrix F_MO, SharedMatrix C, int dim){
+void AO2MO_FockMatrix(SharedMatrix F, SharedMatrix F_MO, SharedMatrix C, int nmo){
 
-    for(int i=0; i<dim; ++i){
+    for(int i = 0; i < nmo; ++i){
 
-        for(int j=0; j<dim; ++j){
+        for(int j = 0; j < nmo; ++j){
 
             double ints_temp = 0.0;
 
-            for(int p=0; p<dim; ++p){
+            for(int p = 0; p < nmo; ++p){
 
-                for(int q=0; q<dim; ++q){
+                for(int q = 0; q < nmo; ++q){
 
                     ints_temp += F->get(0, p, q) * C->get(0, p, i) * C->get(0, q, j);
 
@@ -173,20 +176,24 @@ void AO2MO_FockMatrix(SharedMatrix F, SharedMatrix F_MO, SharedMatrix C, int dim
     }
 }
 
-double MP2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi){
+
+
+double MP2_Energy_SO(SharedMatrix eri_mo, SharedMatrix F_MO, int nso, int doccpi, std::vector<double> so_ints, std::vector<double> epsilon_ijab){
 
     double Emp2 = 0.0;
+    int idx;
 
-    for(int i=0; i<doccpi; ++i){
+    for(int i = 0; i < 2 * doccpi; ++i){
 
-        for(int j=0; j<doccpi; ++j){
+        for(int j = 0; j < 2 * doccpi; ++j){
 
-            for(int a=doccpi; a<dim; ++a){
+            for(int a = 2 * doccpi; a < nso; ++a){
 
-                for(int b=doccpi; b<dim; ++b){
+                for(int b = 2 * doccpi; b < nso; ++b){
 
-                    Emp2 += eri_mo->get(0, i*dim+a, j*dim+b) * ( 2.0 * eri_mo->get(0, i*dim+a, j*dim+b) - eri_mo->get(0, i*dim+b, j*dim+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b));
+                    idx = i * nso * nso * nso + j * nso * nso + a * nso + b;
 
+                    Emp2 += 0.25 * so_ints[idx] * so_ints[idx] / epsilon_ijab[idx];
                 }
             }
         }
@@ -194,25 +201,28 @@ double MP2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi){
     return(Emp2);
 }
 
-double DSRG_PT2_Energy(SharedMatrix eri_mo, SharedMatrix F_MO, int dim, int doccpi, double S){
 
-    double Edsrg_pt2 = 0.0;
+double DSRG_PT2_Energy_SO(SharedMatrix eri_mo, SharedMatrix F_MO, int nso, int doccpi, std::vector<double> so_ints, std::vector<double> epsilon_ijab, double S){
 
-    for(int i=0; i<doccpi; ++i){
+    double Edsrgpt2 = 0.0;
+    int idx;
 
-        for(int j=0; j<doccpi; ++j){
+    for(int i = 0; i < 2 * doccpi; ++i){
 
-            for(int a=doccpi; a<dim; ++a){
+        for(int j = 0; j < 2 * doccpi; ++j){
 
-                for(int b=doccpi; b<dim; ++b){
+            for(int a = 2 * doccpi; a < nso; ++a){
 
-                    Edsrg_pt2 += eri_mo->get(0, i*dim+a, j*dim+b) * ( 2.0 * eri_mo->get(0, i*dim+a, j*dim+b) - eri_mo->get(0, i*dim+b, j*dim+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)) * ( 1 - pow(e,(-2.0 * S * (F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)) * (F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)))));
+                for(int b = 2 * doccpi; b < nso; ++b){
 
+                    idx = i * nso * nso * nso + j * nso * nso + a * nso + b;
+
+                    Edsrgpt2 += 0.25 * so_ints[idx] * so_ints[idx] / epsilon_ijab[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab[idx] * epsilon_ijab[idx] ));
                 }
             }
         }
     }
-    return(Edsrg_pt2);
+    return(Edsrgpt2);
 }
 
 
@@ -234,12 +244,6 @@ void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
 }
 
 
-
-
-
-
-
-
 extern "C"
 SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 {
@@ -254,7 +258,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     MintsHelper mints(ref_wfn);
 
     int      print = options.get_int("PRINT");
-    int      dims[]={ao_basisset->nbf()};
+    int      dims[] = {ao_basisset->nbf()};
     double   CVG = options.get_double("CVG");
     double   pert = options.get_double("PERT");
     double   S_const = options.get_double("S");
@@ -264,6 +268,9 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     double   Enuc = molecule->nuclear_repulsion_energy();
     double   Elec, Etot, Emp2, Edsrg_pt2;
     int      irrep_num = ref_wfn->nirrep();
+
+    int      nmo = dims[0];
+    size_t   nso = 2 * dims[0];
 
 
 
@@ -301,11 +308,26 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 
     Dimension doccpi_add = ref_wfn->doccpi();
 
-    for(int i=0;i<irrep_num;i++){
+    for(int i = 0; i < irrep_num; ++i){
     	doccpi += doccpi_add[i];
     }
 
     std::cout<<std::endl;
+
+
+/************************ index ************************/
+
+    auto four_idx = [&](size_t p, size_t q, size_t r, size_t s, size_t dim) -> size_t {
+        size_t dim2 = dim * dim;
+        size_t dim3 = dim2 * dim;
+        return (p * dim3 + q * dim2 + r * dim + s);
+    };
+
+    auto two_idx = [&](size_t p, size_t q, size_t dim) -> size_t {
+        return (p * dim + q);
+    };
+
+
 
 
 /************************ SCF ************************/
@@ -334,7 +356,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     Omega->zero();
     overlap->diagonalize(evecs, evals);
 
-    for(int i=0; i < dims[0]; ++i){
+    for(int i=0; i < nmo; ++i){
     	Omega->set(0, i, i, 1.0/sqrt(evals->get(0,i)));
     }
      
@@ -356,19 +378,19 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 
 //Create Density matrix
 
-    FormDensityMatrix(D, C, dims[0], doccpi);
+    FormDensityMatrix(D, C, nmo, doccpi);
 
-    FormDensityMatrix(D_uptp, C_uptp, dims[0], doccpi);
+    FormDensityMatrix(D_uptp, C_uptp, nmo, doccpi);
 
 //Create new Fock matrix
 
-	FormNewFockMatrix(F, H, D, eri, dims[0]);
+	FormNewFockMatrix(F, H, D, eri, nmo);
 
-    FormNewFockMatrix(F_uptp, H_uptb, D_uptp, eri, dims[0]);
+    FormNewFockMatrix(F_uptp, H_uptb, D_uptp, eri, nmo);
 
 //Calculate the energy
 
-	Elec = ElecEnergy(Elec, D_uptp, H_uptb, F_uptp, dims[0]);/*!!!!! TEST !!!! unperturbed*/
+	Elec = ElecEnergy(Elec, D_uptp, H_uptb, F_uptp, nmo);/*!!!!! TEST !!!! unperturbed*/
     Etot = Elec + Enuc;
     energy_pre = Etot; 
 
@@ -388,10 +410,10 @@ while( fabs(energy_pre - Etot) > CVG){
     F->diagonalize(evecs, evals);
     C = Matrix::doublet(S, evecs, false, false);
 
-    FormDensityMatrix(D, C, dims[0], doccpi);
-	FormNewFockMatrix(F, H, D, eri, dims[0]);
+    FormDensityMatrix(D, C, nmo, doccpi);
+	FormNewFockMatrix(F, H, D, eri, nmo);
 
-    // Elec = ElecEnergy(Elec, D, H, F, dims[0]);
+    // Elec = ElecEnergy(Elec, D, H, F, nmo);
     // Etot = Elec + Enuc;
 
     iternum++;
@@ -402,9 +424,9 @@ while( fabs(energy_pre - Etot) > CVG){
     F_uptp->diagonalize(evecs, evals);
     C_uptp = Matrix::doublet(S, evecs, false, false);
 
-    FormDensityMatrix(D_uptp, C_uptp, dims[0], doccpi);
-    FormNewFockMatrix(F_uptp, H_uptb, D_uptp, eri, dims[0]);
-    Elec = ElecEnergy(Elec, D_uptp, H_uptb, F_uptp, dims[0]);
+    FormDensityMatrix(D_uptp, C_uptp, nmo, doccpi);
+    FormNewFockMatrix(F_uptp, H_uptb, D_uptp, eri, nmo);
+    Elec = ElecEnergy(Elec, D_uptp, H_uptb, F_uptp, nmo);
     Etot = Elec + Enuc;
 
 }
@@ -414,39 +436,41 @@ while( fabs(energy_pre - Etot) > CVG){
 /************************ MP2 & DSRG-PT2 (Orbital relevant) ************************/
 
 
-    // AO2MO_TwoElecInts(eri, eri_mo, C, dims[0]);
+    // AO2MO_TwoElecInts(eri, eri_mo, C, nmo);
 
-    // AO2MO_FockMatrix(F, F_MO, C, dims[0]);
+    // AO2MO_FockMatrix(F, F_MO, C, nmo);
 
-    // Emp2 = MP2_Energy(eri_mo, F_MO, dims[0], doccpi);
+    // Emp2 = MP2_Energy(eri_mo, F_MO, nmo, doccpi);
 
-    // Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, dims[0], doccpi, S_const);
+    // Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, nmo, doccpi, S_const);
 
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ************************/
 
-    // AO2MO_TwoElecInts(eri, eri_mo, C_uptp, dims[0]);
+    // AO2MO_TwoElecInts(eri, eri_mo, C_uptp, nmo);
 
-    // AO2MO_FockMatrix(F, F_MO, C_uptp, dims[0]);
+    // AO2MO_FockMatrix(F, F_MO, C_uptp, nmo);
 
-    // Emp2 = MP2_Energy(eri_mo, F_MO, dims[0], doccpi);
+    // Emp2 = MP2_Energy(eri_mo, F_MO, nmo, doccpi);
 
-    // Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, dims[0], doccpi, S_const);
+    // Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, nmo, doccpi, S_const);
+
+
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver1.0 ************************/
    
-    AO2MO_TwoElecInts(eri, eri_mo, C_uptp, dims[0]);
+    AO2MO_TwoElecInts(eri, eri_mo, C_uptp, nmo);
 
     SharedMatrix Dp_d (new Matrix("dipole diagonal matrix", 1, dims, dims, 0));
     Dp_d->zero();
 
     SharedMatrix Dp_mo = Dp->clone();    
 
-    AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, dims[0]);
+    AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, nmo);
 
-    Dp_mo->print();
+    // Dp_mo->print();
 
-    for(int i=0; i<dims[0]; ++i){
+    for(int i = 0; i < nmo; ++i){
         Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
     }
 
@@ -454,109 +478,110 @@ while( fabs(energy_pre - Etot) > CVG){
 
 
 
-    AO2MO_FockMatrix(F_uptp, F_MO, C_uptp, dims[0]);
+    AO2MO_FockMatrix(F_uptp, F_MO, C_uptp, nmo);
 
     F_MO->add(Dp_d);
 
 
 
-    Emp2 = MP2_Energy(eri_mo, F_MO, dims[0], doccpi);
-
-    Edsrg_pt2 = DSRG_PT2_Energy(eri_mo, F_MO, dims[0], doccpi, S_const);
+/************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver2.0 ************************/
 
 
-        Dp_d->zero();
 
-    for(int i=0; i<dims[0]; ++i){
-        Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
+
+    // define the order of spin orbitals and store it as a vector of pairs (orbital index,spin)
+    std::vector<std::pair<size_t, int>> so_labels(nso);
+    for (size_t n = 0; n < nmo; n++) {
+        so_labels[2 * n] = std::make_pair(n, 0);     // 0 = alpha
+        so_labels[2 * n + 1] = std::make_pair(n, 1); // 1 = beta
     }
 
+    // allocate the vector that will store the spin orbital integrals
+    size_t nso2 = nso * nso;
+    size_t nso4 = nso2 * nso2;
+    std::vector<double> so_ints(nso4, 0.0);
+    std::vector<double> amp_t(nso4, 0.0);
+    std::vector<double> epsilon_ijab(nso4, 0.0);
 
-    double dp_theo = 0.0;
 
-    for(int i=0; i<doccpi; ++i){
+    for (size_t i = 0; i < 2 * doccpi; ++i){
+        for (size_t j = 0; j < 2 * doccpi; ++j){
+            for (size_t a = 2 * doccpi; a < nso; ++a){
+                for (size_t b = 2 * doccpi; b < nso; ++b){
 
-        for(int j=0; j<doccpi; ++j){
-
-            for(int a=doccpi; a<dims[0]; ++a){
-
-                for(int b=doccpi; b<dims[0]; ++b){
-
-                    dp_theo -= eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) * ( 2.0 * eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) - eri_mo->get(0, i*dims[0]+b, j*dims[0]+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b)) *(Dp_d->get(0,i,i) + Dp_d->get(0,j,j) - Dp_d->get(0,a,a) - Dp_d->get(0,b,b));
+                    epsilon_ijab[four_idx(i, j, a, b, nso)] = F_MO->get(0, i/2, i/2) + F_MO->get(0, j/2, j/2) - F_MO->get(0, a/2, a/2) - F_MO->get(0, b/2, b/2);
 
                 }
             }
         }
     }
 
+    //form the integrals <pq||rs> = <pq|rs> - <pq|sr> = (pr|qs) - (ps|qr)
+    for (size_t p = 0; p < nso; p++) {
+        size_t p_orb = so_labels[p].first;
+        int p_spin = so_labels[p].second;
+        for (size_t q = 0; q < nso; q++) {
+            size_t q_orb = so_labels[q].first;
+            int q_spin = so_labels[q].second;
+            for (size_t r = 0; r < nso; r++) {
+                size_t r_orb = so_labels[r].first;
+                int r_spin = so_labels[r].second;
+                for (size_t s = 0; s < nso; s++) {
+                    size_t s_orb = so_labels[s].first;
+                    int s_spin = so_labels[s].second;
 
-    SharedMatrix D_1 (new Matrix("Density matrix", 1, dims, dims, 0));
-    D_1->zero();
+                    double integral = 0.0;
+                    if ((p_spin == r_spin) and (q_spin == s_spin)) {
+                        integral += eri_mo->get(0, p/2 * nmo + r/2, q/2 * nmo + s/2);
+                    }
+                    if ((p_spin == s_spin) and (q_spin == r_spin)) {
+                        integral -= eri_mo->get(0, p/2 * nmo + s/2, q/2 * nmo + r/2);
+                    }
+                    so_ints[four_idx(p, q, r, s, nso)] = integral;
 
-    for(int i=0; i<doccpi; ++i){
-        for(int j=0; j<doccpi; ++j){
-            for(int a=doccpi; a<dims[0]; ++a){
-                for(int b=doccpi; b<dims[0]; ++b){
-
-                    D_1->add(0,i,i, -0.5 *2.0* (eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) * ( 2.0 * eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) - eri_mo->get(0, i*dims[0]+b, j*dims[0]+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))));
-                    
-                     D_1->add(0,a,a, 0.5 *2.0* (eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) * ( 2.0 * eri_mo->get(0, i*dims[0]+a, j*dims[0]+b) - eri_mo->get(0, i*dims[0]+b, j*dims[0]+a) )/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))/(F_MO->get(0,i,i) + F_MO->get(0,j,j) - F_MO->get(0,a,a) - F_MO->get(0,b,b))));
-
+                    if(p < 2 * doccpi && q < 2 * doccpi && r >= 2 * doccpi && s >= 2 * doccpi){
+                    amp_t[four_idx(p, q, r, s, nso)] = integral / epsilon_ijab[four_idx(p, q, r, s, nso)];}
 
                 }
             }
         }
     }
 
-    double d_1_test = 0.0;
-    for(int i=0; i<dims[0]; ++i){
+    std::vector<double> D_MP2(nso2, 0.0);
 
-        d_1_test += 2*D_1->get(0,i,i)*Dp_mo->get(0,i,i);
+    for(int i = 0; i < 2 * doccpi; ++i){
+        for(int j = 0; j < 2 * doccpi; ++j){
+            for(int a = 2 * doccpi; a < nso; ++a){
+                for(int b = 2 * doccpi; b < nso; ++b){
+
+                    double t2 = amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)];
+
+                    D_MP2[two_idx(i,i,nso)] -= 0.5 * t2;
+                    D_MP2[two_idx(a,a,nso)] += 0.5 * t2;
+
+                }
+            }
+        }
     }
 
-D_1->print();
+    double dipole_MP2 = 0.0;
+
+    for(int i = 0; i < nso; ++i){
+        dipole_MP2 += D_MP2[two_idx(i, i, nso)]*Dp_mo->get(0, i/2, i/2);
+    }
 
 
+    Emp2 = MP2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab );
+    Edsrg_pt2 = DSRG_PT2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab, S_const);
 
 
-/************************ dipole (Orbital irrelevant) ************************/
-
-// double pert_dp;
-//     // AO2MO_FockMatrix(Dp, F_MO, C_uptp, dims[0]);
-//     pert_dp = DSRG_PT2_Energy(eri_mo, Dp, dims[0], doccpi, S_const);
-
-// double dp_elec = 0.0;
-
-// for( int i=0; i<dims[0]; ++i){
-
-//     for( int j=0; j<dims[0]; ++j){
-
-//         dp_elec += 2.0* D_uptp->get(0,i,j) * Dp->get(0,i,j);
-
-
-//     }
-// }
-/**************** dipole *************************/
-
-// AO2MO_FockMatrix(Dp, F_MO, C_uptp, dims[0]);
-// Dp->copy(F_MO);
-// double dp_fp = 0.0;
-// for( int i = 0; i<doccpi; ++i){
-
-//     for( int a = doccpi; a<dims[0]; ++a){
-
-//         dp_fp+= Dp->get(0,i,a) * Dp->get(0,i,a) * (1-pow(e,-2.0*S_const*(Dp->get(0,i,i)-Dp->get(0,a,a))*(Dp->get(0,i,i)-Dp->get(0,a,a)))) / (Dp->get(0,i,i)-Dp->get(0,a,a));
-//     }
-
-// }
 
 /****** test ********/
 
 
 // Dp->print();
-F->print();
-F_uptp->print();
-
+// F->print();
+// F_uptp->print();
 
 
 /****** test ********/    
@@ -572,14 +597,11 @@ F_uptp->print();
     std::cout<<"MP2 energy:                   "<< std::setprecision(15)<< Emp2<< std::endl;
     std::cout<<"Total energy(MP2):            "<< std::setprecision(15)<< Escf + Emp2 << std::endl;
     std::cout<<"DSRG-PT2 energy:              "<< std::setprecision(15)<< Edsrg_pt2 << std::endl;
-    std::cout<<"Total energy(DSRG-PT2):       "<< std::setprecision(15)<< Escf + Edsrg_pt2 << std::endl << std::endl;
-
+    std::cout<<"Total energy(DSRG-PT2):       "<< std::setprecision(15)<< Escf + Edsrg_pt2 << std::endl;
+    std::cout<<"MP2 dipole:                   "<< std::setprecision(15)<< dipole_MP2 << std::endl << std::endl;
     // std::cout<<"dp:   "<< std::setprecision(15)<< pert_dp << std::endl<< std::endl;
-
     // std::cout<<"dpele:   "<< std::setprecision(15)<< dp_elec +ndip->get(0,2) << std::endl<< std::endl;
-    //     std::cout<<"dpe1:   "<< std::setprecision(15)<< dp_fp << std::endl<< std::endl;
-    std::cout<<"dp test:                   "<< std::setprecision(15)<< dp_theo<< std::endl;
-       std::cout<<"dp test1:                   "<< std::setprecision(15)<< d_1_test<< std::endl;
+    // std::cout<<"dpe1:   "<< std::setprecision(15)<< dp_fp << std::endl<< std::endl;
 
     return ref_wfn;
 }
