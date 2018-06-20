@@ -459,7 +459,7 @@ while( fabs(energy_pre - Etot) > CVG){
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver1.0 ************************/
    
-    AO2MO_TwoElecInts(eri, eri_mo, C_uptp, nmo);
+
 
     SharedMatrix Dp_d (new Matrix("dipole diagonal matrix", 1, dims, dims, 0));
     Dp_d->zero();
@@ -468,11 +468,30 @@ while( fabs(energy_pre - Etot) > CVG){
 
     AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, nmo);
 
-    // Dp_mo->print();
 
-    for(int i = 0; i < nmo; ++i){
+    /* dipole diagonal */
+    // for(int i = 0; i < nmo; ++i){
+    //     Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
+    // }
+    /* dipole diagonal */
+
+
+
+
+
+    /* dipole OO block */
+    for(int i = 0; i < doccpi; ++i){
+        for(int j = 0; j < doccpi; ++j){
+            Dp_d->set(0, i, j, Dp_mo->get(0,i,j));
+        }
+    }
+
+    for(int i = doccpi; i < nmo; ++i){
         Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
     }
+    /* dipole OO block */
+
+
 
     Dp_d->Matrix::scale(pert);
 
@@ -483,11 +502,90 @@ while( fabs(energy_pre - Etot) > CVG){
     F_MO->add(Dp_d);
 
 
+   
+    // for(int i = 0; i < doccpi; ++i){
+    //     for(int j = 0; j < doccpi; ++j){
+    //         Dp_d->set(0, i, j, Dp_mo->get(0, i, j));
+    //     }
+    // }
+
+    // for(int i = doccpi; i < nmo; ++i){
+    //     Dp_d->set(0, i, i, Dp_mo->get(0, i, i));
+    // }
+
+/************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver3.0 O-O block ************************/
+
+    /* dipole OO block */
+
+    /* fock OO block */
+
+    int tims[]={0};
+    tims[0]=doccpi;
+
+    SharedMatrix F_OO (new Matrix("Fock OO matrix", 1, tims, tims, 0));
+
+    for(int i = 0; i < doccpi; ++i){
+        for(int j = 0; j < doccpi; ++j){
+            F_OO->set(0, i, j, F_MO->get(0, i, j));
+        }
+    }
+
+
+
+    SharedMatrix evecs_oo (new Matrix("evecs", 1, tims, tims, 0));
+    SharedVector evals_oo (new Vector("evals", 1, tims));
+
+    F_OO->diagonalize(evecs_oo, evals_oo);
+    evecs_oo->print();
+    evals_oo->print();
+
+    SharedMatrix F_MO_1 (new Matrix("rotated Fock matrix", 1, dims, dims, 0));
+    F_MO_1->zero();
+
+    for(int i = 0; i < nmo; ++i){
+        F_MO_1->set(0,i,i, i<doccpi? evals_oo->get(0,i) : F_MO->get(0,i,i) );
+    }
+
+
+    SharedMatrix C_oo (new Matrix("C_oo matrix", 1, dims, dims, 0));
+    SharedMatrix U_oo (new Matrix("transformation_oo matrix", 1, dims, dims, 0));
+
+    U_oo->zero();
+
+    for(int i = 0; i < nmo; ++i){
+        for(int j = 0; j < nmo; ++j){
+            if( i < doccpi && j < doccpi){
+                U_oo->set(0, i, j, evecs_oo->get(0, i, j));
+            }
+            if(i>=doccpi && i==j){
+                U_oo->set(0,i,j,1.0);
+            }
+        }
+    }    
+// C_oo = Matrix::doublet(U_oo, U_oo, true, false);
+// C_oo->print();
+C_oo = Matrix::doublet(C_uptp, U_oo, false, false);
+// C_uptp->print();
+// C_oo->print();
+
+/********** !!!!!This is the test area, remember to remove this section to rewind !!!!! *************/
+    SharedMatrix F_MO_uptp_const (new Matrix("permanent Unperturbed Fock matrix in MO", 1, dims, dims, 0));
+
+// F_MO_uptp_const->copy(F_MO);
+
+// F_MO->copy(F_MO_1);
+
+// C_uptp->copy(C_oo);
+
+
+
+
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver2.0 ************************/
 
-
-
+    AO2MO_TwoElecInts(eri, eri_mo, C_uptp, nmo);
+eri->print();
+eri_mo->print();
 
     // define the order of spin orbitals and store it as a vector of pairs (orbital index,spin)
     std::vector<std::pair<size_t, int>> so_labels(nso);
@@ -564,15 +662,43 @@ while( fabs(energy_pre - Etot) > CVG){
         }
     }
 
+    for(int m = 0; m < 2 * doccpi; ++m){
+        for(int n = 0; n < 2 * doccpi; ++n){
+            for(int j = 0; j < 2 * doccpi; ++j){
+                for(int a = 2 * doccpi; a < nso; ++a){
+                    for(int b = 2 * doccpi; b < nso; ++b){
+
+                        if(m!=n){
+                        double t2 = amp_t[four_idx(m, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)];
+
+                        D_MP2[two_idx(m,n,nso)] -= 0.5 * t2;}
+                    
+                    }
+                }
+            }
+        }
+    }    
+
     double dipole_MP2 = 0.0;
 
-    for(int i = 0; i < nso; ++i){
-        dipole_MP2 += D_MP2[two_idx(i, i, nso)]*Dp_mo->get(0, i/2, i/2);
+    for(int i = 0; i < 2 * doccpi; ++i){
+        for(int j = 0; j < 2 * doccpi; ++j){
+
+            dipole_MP2 += D_MP2[two_idx(i, j, nso)] * Dp_mo->get(0, i/2, j/2);
+
+        }
     }
+
+    for(int i = 2 * doccpi; i < nso; ++i){
+
+            dipole_MP2 += D_MP2[two_idx(i, i, nso)] * Dp_mo->get(0, i/2, i/2);
+
+    }    
 
 
     Emp2 = MP2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab );
     Edsrg_pt2 = DSRG_PT2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab, S_const);
+
 
 
 
@@ -590,7 +716,7 @@ while( fabs(energy_pre - Etot) > CVG){
 
 //Output
 	std::cout<<"Energy precision(SCF Iter):   "<< std::setprecision(15)<< CVG<< std::endl<< std::endl;
-	std::cout<<"Iteration times:              "<< iternum<< std::endl;
+	std::cout<<"Iteration times:              "<< iternum << std::endl;
     std::cout<<"Nuclear repulsion energy:     "<< std::setprecision(15)<< Enuc<< std::endl;
     std::cout<<"Electronic energy:            "<< std::setprecision(15)<< Elec<< std::endl;
     std::cout<<"SCF energy:                   "<< std::setprecision(15)<< Escf<< std::endl;
