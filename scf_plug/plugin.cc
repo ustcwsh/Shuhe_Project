@@ -482,14 +482,19 @@ while( fabs(energy_pre - Etot) > CVG){
     /* dipole OO block */
     for(int i = 0; i < doccpi; ++i){
         for(int j = 0; j < doccpi; ++j){
+
             Dp_d->set(0, i, j, Dp_mo->get(0,i,j));
         }
     }
 
-    for(int i = doccpi; i < nmo; ++i){
-        Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
+    /* dipole VV block */
+    for(int a = doccpi; a < nmo; ++a){
+        for(int b = doccpi; b < nmo; ++b){
+
+            Dp_d->set(0, a, b, Dp_mo->get(0,a,b));
+        }
     }
-    /* dipole OO block */
+
 
 
 
@@ -517,65 +522,80 @@ while( fabs(energy_pre - Etot) > CVG){
 
     /* dipole OO block */
 
-    /* fock OO block */
 
-    int tims[]={0};
-    tims[0]=doccpi;
+
+    int tims[] = {0};
+    tims[0] = doccpi;
+    int sims[] = {0};
+    sims[0] = nmo - doccpi;
 
     SharedMatrix F_OO (new Matrix("Fock OO matrix", 1, tims, tims, 0));
+    SharedMatrix F_VV (new Matrix("Fock VV matrix", 1, sims, sims, 0));
 
+    /* fock OO block */
     for(int i = 0; i < doccpi; ++i){
         for(int j = 0; j < doccpi; ++j){
             F_OO->set(0, i, j, F_MO->get(0, i, j));
         }
     }
 
+    /* fock VV block */
+    for(int a = doccpi; a < nmo; ++a){
+        for(int b = doccpi; b < nmo; ++b){
+            F_VV->set(0, a - doccpi, b - doccpi, F_MO->get(0, a, b));
+        }
+    }
 
 
-    SharedMatrix evecs_oo (new Matrix("evecs", 1, tims, tims, 0));
-    SharedVector evals_oo (new Vector("evals", 1, tims));
+    SharedMatrix evecs_oo (new Matrix("evecs oo", 1, tims, tims, 0));
+    SharedVector evals_oo (new Vector("evals oo", 1, tims));
+    SharedMatrix evecs_vv (new Matrix("evecs vv", 1, sims, sims, 0));
+    SharedVector evals_vv (new Vector("evals vv", 1, sims));
 
     F_OO->diagonalize(evecs_oo, evals_oo);
-    evecs_oo->print();
-    evals_oo->print();
+
+
+    F_VV->diagonalize(evecs_vv, evals_vv);
+
+
+
 
     SharedMatrix F_MO_1 (new Matrix("rotated Fock matrix", 1, dims, dims, 0));
     F_MO_1->zero();
 
     for(int i = 0; i < nmo; ++i){
-        F_MO_1->set(0,i,i, i<doccpi? evals_oo->get(0,i) : F_MO->get(0,i,i) );
+        F_MO_1->set(0, i, i, i<doccpi? evals_oo->get(0,i) : evals_vv->get(0,i - doccpi) );
     }
 
 
-    SharedMatrix C_oo (new Matrix("C_oo matrix", 1, dims, dims, 0));
-    SharedMatrix U_oo (new Matrix("transformation_oo matrix", 1, dims, dims, 0));
+    SharedMatrix C_pert (new Matrix("C_pert matrix", 1, dims, dims, 0));
+    SharedMatrix U_pert (new Matrix("transformation matrix", 1, dims, dims, 0));
 
-    U_oo->zero();
+    U_pert->zero();
 
     for(int i = 0; i < nmo; ++i){
         for(int j = 0; j < nmo; ++j){
             if( i < doccpi && j < doccpi){
-                U_oo->set(0, i, j, evecs_oo->get(0, i, j));
+                U_pert->set(0, i, j, evecs_oo->get(0, i, j));
             }
-            if(i>=doccpi && i==j){
-                U_oo->set(0,i,j,1.0);
+            else if(i>=doccpi && j>=doccpi){
+                U_pert->set(0, i, j, evecs_vv->get(0, i-doccpi, j-doccpi));
             }
         }
     }    
 // C_oo = Matrix::doublet(U_oo, U_oo, true, false);
 // C_oo->print();
-C_oo = Matrix::doublet(C_uptp, U_oo, false, false);
+C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
 // C_uptp->print();
 // C_oo->print();
 
 /********** !!!!!This is the test area, remember to remove this section to rewind !!!!! *************/
-    SharedMatrix F_MO_uptp_const (new Matrix("permanent Unperturbed Fock matrix in MO", 1, dims, dims, 0));
 
-// F_MO_uptp_const->copy(F_MO);
+
+
 
 // F_MO->copy(F_MO_1);
-
-// C_uptp->copy(C_oo);
+// C_uptp->copy(C_pert);
 
 
 
@@ -584,8 +604,8 @@ C_oo = Matrix::doublet(C_uptp, U_oo, false, false);
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver2.0 ************************/
 
     AO2MO_TwoElecInts(eri, eri_mo, C_uptp, nmo);
-eri->print();
-eri_mo->print();
+// eri->print();
+// eri_mo->print();
 
     // define the order of spin orbitals and store it as a vector of pairs (orbital index,spin)
     std::vector<std::pair<size_t, int>> so_labels(nso);
@@ -669,15 +689,42 @@ eri_mo->print();
                     for(int b = 2 * doccpi; b < nso; ++b){
 
                         if(m!=n){
-                        double t2 = amp_t[four_idx(m, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)];
+                        double t3 = amp_t[four_idx(m, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)];
 
-                        D_MP2[two_idx(m,n,nso)] -= 0.5 * t2;}
+                        D_MP2[two_idx(m, n, nso)] -= 0.5 * t3;}
                     
                     }
                 }
             }
         }
     }    
+
+
+    for(int c = 2 * doccpi; c < nso; ++c){
+        for(int d = 2 * doccpi; d < nso; ++d){
+            for(int a = 2 * doccpi; a < nso; ++a){
+                for(int i = 0; i < 2 * doccpi; ++i){
+                    for(int j = 0; j < 2 * doccpi; ++j){
+
+                        if(c!=d){
+                        double t4 = amp_t[four_idx(i, j, a, c, nso)] * amp_t[four_idx(i, j, a, d, nso)];
+
+                        D_MP2[two_idx(d, c, nso)] += 0.5 * t4;}
+                    
+                    }
+                }
+            }
+        }
+    }    
+
+
+for(int i=0;i<nso ; i++){
+    for(int j=0;j<nso ; j++){
+        std::cout<<D_MP2[two_idx(i, j, nso)]<<"         ";
+    }
+    std::cout<<std::endl;
+}
+
 
     double dipole_MP2 = 0.0;
 
@@ -689,11 +736,13 @@ eri_mo->print();
         }
     }
 
-    for(int i = 2 * doccpi; i < nso; ++i){
+    for(int a = 2 * doccpi; a < nso; ++a){
+        for(int b = 2 * doccpi; b < nso; ++b){
 
-            dipole_MP2 += D_MP2[two_idx(i, i, nso)] * Dp_mo->get(0, i/2, i/2);
+            dipole_MP2 += D_MP2[two_idx(a, b, nso)] * Dp_mo->get(0, a/2, b/2);
 
-    }    
+        }
+    }
 
 
     Emp2 = MP2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab );
