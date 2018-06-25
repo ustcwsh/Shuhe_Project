@@ -469,34 +469,35 @@ while( fabs(energy_pre - Etot) > CVG){
     AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, nmo);
 
 
-    /* dipole diagonal */
+    // /* dipole diagonal */
     // for(int i = 0; i < nmo; ++i){
     //     Dp_d->set(0, i, i, Dp_mo->get(0,i,i));
     // }
-    /* dipole diagonal */
+    // /* dipole diagonal */
 
 
 
 
 
-    /* dipole OO block */
-    for(int i = 0; i < doccpi; ++i){
-        for(int j = 0; j < doccpi; ++j){
+    // /* dipole OO block */
+    // for(int i = 0; i < doccpi; ++i){
+    //     for(int j = 0; j < doccpi; ++j){
 
-            Dp_d->set(0, i, j, Dp_mo->get(0,i,j));
-        }
-    }
+    //         Dp_d->set(0, i, j, Dp_mo->get(0,i,j));
+    //     }
+    // }
 
-    /* dipole VV block */
-    for(int a = doccpi; a < nmo; ++a){
-        for(int b = doccpi; b < nmo; ++b){
+    // /* dipole VV block */
+    // for(int a = doccpi; a < nmo; ++a){
+    //     for(int b = doccpi; b < nmo; ++b){
 
-            Dp_d->set(0, a, b, Dp_mo->get(0,a,b));
-        }
-    }
+    //         Dp_d->set(0, a, b, Dp_mo->get(0,a,b));
+    //     }
+    // }
 
-
-
+    
+    /* dipole OV,OO,VV block */
+    Dp_d->copy(Dp_mo);
 
     Dp_d->Matrix::scale(pert);
 
@@ -505,6 +506,8 @@ while( fabs(energy_pre - Etot) > CVG){
     AO2MO_FockMatrix(F_uptp, F_MO, C_uptp, nmo);
 
     F_MO->add(Dp_d);
+
+
 
 
    
@@ -524,70 +527,80 @@ while( fabs(energy_pre - Etot) > CVG){
 
 
 
-    int tims[] = {0};
-    tims[0] = doccpi;
-    int sims[] = {0};
-    sims[0] = nmo - doccpi;
+    // int tims[] = {0};
+    // tims[0] = doccpi;
+    // int sims[] = {0};
+    // sims[0] = nmo - doccpi;
 
-    SharedMatrix F_OO (new Matrix("Fock OO matrix", 1, tims, tims, 0));
-    SharedMatrix F_VV (new Matrix("Fock VV matrix", 1, sims, sims, 0));
+    // SharedMatrix F_OO (new Matrix("Fock OO matrix", 1, tims, tims, 0));
+    // SharedMatrix F_VV (new Matrix("Fock VV matrix", 1, sims, sims, 0));
 
-    /* fock OO block */
-    for(int i = 0; i < doccpi; ++i){
-        for(int j = 0; j < doccpi; ++j){
-            F_OO->set(0, i, j, F_MO->get(0, i, j));
-        }
-    }
+    // /* fock OO block */
+    // for(int i = 0; i < doccpi; ++i){
+    //     for(int j = 0; j < doccpi; ++j){
+    //         F_OO->set(0, i, j, F_MO->get(0, i, j));
+    //     }
+    // }
 
-    /* fock VV block */
-    for(int a = doccpi; a < nmo; ++a){
-        for(int b = doccpi; b < nmo; ++b){
-            F_VV->set(0, a - doccpi, b - doccpi, F_MO->get(0, a, b));
-        }
-    }
-
-
-    SharedMatrix evecs_oo (new Matrix("evecs oo", 1, tims, tims, 0));
-    SharedVector evals_oo (new Vector("evals oo", 1, tims));
-    SharedMatrix evecs_vv (new Matrix("evecs vv", 1, sims, sims, 0));
-    SharedVector evals_vv (new Vector("evals vv", 1, sims));
-
-    F_OO->diagonalize(evecs_oo, evals_oo);
+    // /* fock VV block */
+    // for(int a = doccpi; a < nmo; ++a){
+    //     for(int b = doccpi; b < nmo; ++b){
+    //         F_VV->set(0, a - doccpi, b - doccpi, F_MO->get(0, a, b));
+    //     }
+    // }
 
 
-    F_VV->diagonalize(evecs_vv, evals_vv);
+    // SharedMatrix evecs_oo (new Matrix("evecs oo", 1, tims, tims, 0));
+    // SharedVector evals_oo (new Vector("evals oo", 1, tims));
+    // SharedMatrix evecs_vv (new Matrix("evecs vv", 1, sims, sims, 0));
+    // SharedVector evals_vv (new Vector("evals vv", 1, sims));
+
+    // F_OO->diagonalize(evecs_oo, evals_oo);
+
+    // F_VV->diagonalize(evecs_vv, evals_vv);
 
 
+
+    /* dipole OO,VV,OV block */
+
+    F_MO->diagonalize(evecs, evals);
 
 
     SharedMatrix F_MO_1 (new Matrix("rotated Fock matrix", 1, dims, dims, 0));
     F_MO_1->zero();
 
+    // for(int i = 0; i < nmo; ++i){
+    //     F_MO_1->set(0, i, i, i<doccpi? evals_oo->get(0,i) : evals_vv->get(0,i - doccpi) );
+    // }
+
+
     for(int i = 0; i < nmo; ++i){
-        F_MO_1->set(0, i, i, i<doccpi? evals_oo->get(0,i) : evals_vv->get(0,i - doccpi) );
+        F_MO_1->set(0, i, i, evals->get(0, i));
     }
 
 
     SharedMatrix C_pert (new Matrix("C_pert matrix", 1, dims, dims, 0));
     SharedMatrix U_pert (new Matrix("transformation matrix", 1, dims, dims, 0));
 
-    U_pert->zero();
+    // U_pert->zero();
 
-    for(int i = 0; i < nmo; ++i){
-        for(int j = 0; j < nmo; ++j){
-            if( i < doccpi && j < doccpi){
-                U_pert->set(0, i, j, evecs_oo->get(0, i, j));
-            }
-            else if(i>=doccpi && j>=doccpi){
-                U_pert->set(0, i, j, evecs_vv->get(0, i-doccpi, j-doccpi));
-            }
-        }
-    }    
+    // for(int i = 0; i < nmo; ++i){
+    //     for(int j = 0; j < nmo; ++j){
+    //         if( i < doccpi && j < doccpi){
+    //             U_pert->set(0, i, j, evecs_oo->get(0, i, j));
+    //         }
+    //         else if(i>=doccpi && j>=doccpi){
+    //             U_pert->set(0, i, j, evecs_vv->get(0, i-doccpi, j-doccpi));
+    //         }
+    //     }
+    // }    
+
+    U_pert->copy(evecs);
+
 // C_oo = Matrix::doublet(U_oo, U_oo, true, false);
 // C_oo->print();
 C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
-// C_uptp->print();
-// C_oo->print();
+
 
 /********** !!!!!This is the test area, remember to remove this section to rewind !!!!! *************/
 
@@ -595,11 +608,12 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
 
 
 // F_MO->copy(F_MO_1);
+
 // C_uptp->copy(C_pert);
 
 
-
-
+// C_uptp->copy(C);
+// AO2MO_FockMatrix(F, F_MO, C, nmo);
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver2.0 ************************/
 
@@ -619,15 +633,19 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
     size_t nso4 = nso2 * nso2;
     std::vector<double> so_ints(nso4, 0.0);
     std::vector<double> amp_t(nso4, 0.0);
+    std::vector<double> epsilon(nso, 0.0);
     std::vector<double> epsilon_ijab(nso4, 0.0);
 
+    for (size_t p = 0; p < nso; ++p){
+        epsilon[p] = F_MO->get(0, p/2, p/2);
+    }
 
     for (size_t i = 0; i < 2 * doccpi; ++i){
         for (size_t j = 0; j < 2 * doccpi; ++j){
             for (size_t a = 2 * doccpi; a < nso; ++a){
                 for (size_t b = 2 * doccpi; b < nso; ++b){
 
-                    epsilon_ijab[four_idx(i, j, a, b, nso)] = F_MO->get(0, i/2, i/2) + F_MO->get(0, j/2, j/2) - F_MO->get(0, a/2, a/2) - F_MO->get(0, b/2, b/2);
+                    epsilon_ijab[four_idx(i, j, a, b, nso)] = epsilon[i] + epsilon[j] - epsilon[a] - epsilon[b];
 
                 }
             }
@@ -665,7 +683,18 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
         }
     }
 
-    std::vector<double> D_MP2(nso2, 0.0);
+
+    int dims_nso2[] = {0};
+    dims_nso2[0] = nso;
+
+
+    SharedMatrix D_MP2 (new Matrix("MP2 Dipole Density matrix", 1, dims_nso2, dims_nso2, 0));
+    SharedMatrix Z_MP2 (new Matrix("Z MP2 matrix", 1, dims_nso2, dims_nso2, 0));
+    SharedMatrix Z_temp (new Matrix("Z matrix temporal", 1, dims_nso2, dims_nso2, 0));
+
+    D_MP2->zero();
+
+
 
     for(int i = 0; i < 2 * doccpi; ++i){
         for(int j = 0; j < 2 * doccpi; ++j){
@@ -674,8 +703,8 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
 
                     double t2 = amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)];
 
-                    D_MP2[two_idx(i,i,nso)] -= 0.5 * t2;
-                    D_MP2[two_idx(a,a,nso)] += 0.5 * t2;
+                    D_MP2->add(0, i, i, -0.5 * t2);
+                    D_MP2->add(0, a, a, 0.5 * t2);
 
                 }
             }
@@ -691,14 +720,13 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
                         if(m!=n){
                         double t3 = amp_t[four_idx(m, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)];
 
-                        D_MP2[two_idx(m, n, nso)] -= 0.5 * t3;}
+                        D_MP2->add(0, m, n, -0.5 * t3);}
                     
                     }
                 }
             }
         }
     }    
-
 
     for(int c = 2 * doccpi; c < nso; ++c){
         for(int d = 2 * doccpi; d < nso; ++d){
@@ -709,7 +737,7 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
                         if(c!=d){
                         double t4 = amp_t[four_idx(i, j, a, c, nso)] * amp_t[four_idx(i, j, a, d, nso)];
 
-                        D_MP2[two_idx(d, c, nso)] += 0.5 * t4;}
+                        D_MP2->add(0, d, c, 0.5 * t4);}
                     
                     }
                 }
@@ -717,32 +745,183 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
         }
     }    
 
+Z_MP2->copy(D_MP2);
+Z_MP2->Matrix::scale(2.0);
+Z_temp->copy(Z_MP2);
 
-for(int i=0;i<nso ; i++){
-    for(int j=0;j<nso ; j++){
-        std::cout<<D_MP2[two_idx(i, j, nso)]<<"         ";
+
+
+for ( int times = 0; times < 100; ++times){
+
+    for(int c = 2 * doccpi; c < nso; ++c){
+        for(int n = 0; n < 2 *doccpi; ++n){
+
+            double T_1 = 0.0; 
+            double T_2 = 0.0; 
+            double T_3 = 0.0; 
+            double T_4 = 0.0; 
+            double T_5 = 0.0; 
+
+            for(int j = 0; j < 2 * doccpi; ++j){
+                for(int a = 2 * doccpi; a < nso; a++){
+                    for(int b = 2 * doccpi; b < nso; ++b){
+
+                        T_1 += so_ints[four_idx(c, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)]; 
+                    }
+                }
+            }
+
+
+            for(int i = 0; i < 2 * doccpi; ++i){
+                for(int j = 0; j < 2 * doccpi; ++j){
+                    for(int b = 2 * doccpi; b < nso; ++b){
+
+                        T_2 -= so_ints[four_idx(i, j, n, b, nso)] * amp_t[four_idx(i, j, c, b, nso)]; 
+                    }
+                }
+            }
+
+
+            for(int i = 0; i < 2 * doccpi; ++i){
+
+                for(int j = 0; j < 2 * doccpi; ++j){
+                    for(int k = 0; k < 2 * doccpi; ++k){
+                        for(int a = 2 * doccpi; a < nso; ++a){
+                            for(int b = 2 * doccpi; b < nso; ++b){
+
+                 
+                                T_4 -=  so_ints[four_idx(i, n, j, c, nso)]*amp_t[four_idx(i, k, a, b, nso)]*amp_t[four_idx(j, k, a, b, nso)];   
+
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            for(int i = 0; i < 2 * doccpi; ++i){
+
+                for(int j = 0; j < 2 * doccpi; ++j){
+                    for(int d = 2 * doccpi; d < nso; ++d){
+                        for(int a = 2 * doccpi; a < nso; ++a){
+                            for(int b = 2 * doccpi; b < nso; ++b){
+
+                 
+                                T_5 +=  so_ints[four_idx(a, n, b, c, nso)]*amp_t[four_idx(i, j, a, d, nso)]*amp_t[four_idx(i, j, b, d, nso)];   
+
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            for(int i = 0; i < 2 * doccpi; ++i){
+                for(int a = 2 * doccpi; a < nso; ++a){
+
+                    T_3+=Z_MP2->get(0,i,a)*(so_ints[four_idx(i, n, a, c, nso)]+so_ints[four_idx(a, n, i, c, nso)]);
+
+
+                }
+            }        
+
+
+            // for(int p = 0; p < nso; ++p){
+            //     for(int q = 0; q < nso; ++q){
+
+            //         if (p != q){
+            //             T_3 += so_ints[four_idx(p, n, q, c, nso)] * Z_MP2->get(0, q, p);
+            //         }
+
+            //     }
+            // }
+
+
+            // for(int i = 0; i < 2 * doccpi; ++i){
+
+            //     double temp = 0.0;
+
+            //     for(int j = 0; j < 2 * doccpi; ++j){
+            //         for(int a = 2 * doccpi; a < nso; ++a){
+            //             for(int b = 2 * doccpi; b < nso; ++b){
+
+            //                 temp -= amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)]; 
+            //             }
+            //         }
+            //     }
+
+            //     T_4 += temp * so_ints[four_idx(i, n, i, c, nso)];
+            // }
+
+
+            // for(int a = 2 * doccpi; a < nso; ++a){
+
+            //     double temp = 0.0;
+
+            //     for(int i = 0; i < 2 * doccpi; ++i){
+            //         for(int j = 0; j < 2 * doccpi; ++j){
+            //             for(int b = 2 * doccpi; b < nso; ++b){
+
+            //                 temp += amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)]; 
+            //             }
+            //         }
+            //     }
+
+            //     T_5 += temp * so_ints[four_idx(a, n, a, c, nso)];
+            // }
+
+            Z_temp->set(0, n, c, (T_1 + T_2 + T_3 + T_4 + T_5) / (epsilon[n] - epsilon[c]));
+            Z_temp->set(0, c, n, Z_temp->get(0, n, c));
+
+        }
     }
-    std::cout<<std::endl;
+    Z_MP2->copy(Z_temp);
 }
+
+for(int i = 2*doccpi;i<nso;++i){
+    for(int a = 0;a<2*doccpi;++a){
+        D_MP2->set(0,i,a,0.5*Z_MP2->get(0,i,a));
+                D_MP2->set(0,a,i,0.5*Z_MP2->get(0,a,i));
+
+    }
+}
+
+/* print the density */
+    
+    D_MP2->print();
+
+/* print the density */
+
+
+
 
 
     double dipole_MP2 = 0.0;
 
-    for(int i = 0; i < 2 * doccpi; ++i){
-        for(int j = 0; j < 2 * doccpi; ++j){
+    for(int p = 0; p < nso; ++p){
+        for(int q = 0; q < nso; ++q){
 
-            dipole_MP2 += D_MP2[two_idx(i, j, nso)] * Dp_mo->get(0, i/2, j/2);
-
-        }
-    }
-
-    for(int a = 2 * doccpi; a < nso; ++a){
-        for(int b = 2 * doccpi; b < nso; ++b){
-
-            dipole_MP2 += D_MP2[two_idx(a, b, nso)] * Dp_mo->get(0, a/2, b/2);
+            dipole_MP2 += D_MP2->get(0, p, q) * Dp_mo->get(0, p/2, q/2);
 
         }
     }
+
+
+    // for(int i = 0; i < 2 * doccpi; ++i){
+    //     for(int j = 0; j < 2 * doccpi; ++j){
+
+    //         dipole_MP2 += D_MP2[two_idx(i, j, nso)] * Dp_mo->get(0, i/2, j/2);
+
+    //     }
+    // }
+
+    // for(int a = 2 * doccpi; a < nso; ++a){
+    //     for(int b = 2 * doccpi; b < nso; ++b){
+
+    //         dipole_MP2 += D_MP2[two_idx(a, b, nso)] * Dp_mo->get(0, a/2, b/2);
+
+    //     }
+    // }
 
 
     Emp2 = MP2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab );
