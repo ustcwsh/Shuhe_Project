@@ -44,12 +44,12 @@
 #include <iomanip>
 #include <vector>
 
-double e=2.718281828;
+double e = 2.718281828;
 
 
 namespace psi{ namespace scf_plug {
 
-extern "C"
+extern "C" PSI_API
 int read_options(std::string name, Options& options)
 {
     if (name == "SCF_PLUG"|| options.read_globals()) {
@@ -244,7 +244,7 @@ void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
 }
 
 
-extern "C"
+extern "C" PSI_API
 SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 {
 
@@ -265,7 +265,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     int      iternum = 1;
     double   energy_pre;
     int      doccpi = 0;
-    double   Enuc = molecule->nuclear_repulsion_energy();
+    double   Enuc = molecule->nuclear_repulsion_energy(ref_wfn->get_dipole_field_strength());
     double   Elec, Etot, Emp2, Edsrg_pt2;
     int      irrep_num = ref_wfn->nirrep();
 
@@ -284,6 +284,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix F (new Matrix("Fock matrix", 1, dims, dims, 0));
     SharedMatrix F_uptp (new Matrix("Unperturbed Fock matrix", 1, dims, dims, 0));
     SharedMatrix F_MO (new Matrix("Fock_MO matrix", 1, dims, dims, 0));
+    SharedMatrix F_MO_uptp (new Matrix("unperturbed Fock_MO matrix", 1, dims, dims, 0));
     SharedMatrix C (new Matrix("C matrix", 1, dims, dims, 0));
     SharedMatrix C_uptp (new Matrix("Unperturbed C matrix", 1, dims, dims, 0));
     SharedMatrix D (new Matrix("Density matrix", 1, dims, dims, 0));
@@ -505,6 +506,8 @@ while( fabs(energy_pre - Etot) > CVG){
 
     AO2MO_FockMatrix(F_uptp, F_MO, C_uptp, nmo);
 
+    F_MO_uptp->copy(F_MO);
+
     F_MO->add(Dp_d);
 
 
@@ -606,14 +609,20 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
 
 
 
+// F_MO->copy(F_MO_uptp);
+
+
+
+
 
 // F_MO->copy(F_MO_1);
-
 // C_uptp->copy(C_pert);
 
 
-// C_uptp->copy(C);
-// AO2MO_FockMatrix(F, F_MO, C, nmo);
+/******** This is for oovv block finite analysis **********/
+
+C_uptp->copy(C);
+AO2MO_FockMatrix(F, F_MO, C, nmo);
 
 /************************ MP2 & DSRG-PT2 (Orbital irrelevant) ver2.0 ************************/
 
@@ -693,23 +702,40 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
     SharedMatrix Z_temp (new Matrix("Z matrix temporal", 1, dims_nso2, dims_nso2, 0));
 
     D_MP2->zero();
+    Z_MP2->zero();
 
 
 
-    for(int i = 0; i < 2 * doccpi; ++i){
-        for(int j = 0; j < 2 * doccpi; ++j){
-            for(int a = 2 * doccpi; a < nso; ++a){
-                for(int b = 2 * doccpi; b < nso; ++b){
 
-                    double t2 = amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)];
 
-                    D_MP2->add(0, i, i, -0.5 * t2);
-                    D_MP2->add(0, a, a, 0.5 * t2);
 
-                }
-            }
-        }
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // for(int i = 0; i < 2 * doccpi; ++i){
+    //     for(int j = 0; j < 2 * doccpi; ++j){
+    //         for(int a = 2 * doccpi; a < nso; ++a){
+    //             for(int b = 2 * doccpi; b < nso; ++b){
+
+    //                 double t2 = amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)];
+
+    //                 D_MP2->add(0, i, i, -0.5 * t2);
+    //                 D_MP2->add(0, a, a, 0.5 * t2);
+
+    //             }
+    //         }
+    //     }
+    // }
 
     for(int m = 0; m < 2 * doccpi; ++m){
         for(int n = 0; n < 2 * doccpi; ++n){
@@ -718,10 +744,26 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
                     for(int b = 2 * doccpi; b < nso; ++b){
 
                         if(m!=n){
-                        double t3 = amp_t[four_idx(m, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)];
 
-                        D_MP2->add(0, m, n, -0.5 * t3);}
-                    
+                        if(fabs(epsilon[m]-epsilon[n]) > 1e-6){
+
+                            double t3;
+
+                            t3 = 1.0/(epsilon[n] - epsilon[m]) * so_ints[four_idx(m, j, a, b, nso)] * so_ints[four_idx(a, b, n, j, nso)] * ((1.0-pow(e, -2.0*S_const*epsilon_ijab[four_idx(n, j, a, b, nso)]*epsilon_ijab[four_idx(n, j, a, b, nso)]))/epsilon_ijab[four_idx(n, j, a, b, nso)] - (1.0-pow(e, -2.0*S_const*epsilon_ijab[four_idx(m, j, a, b, nso)]*epsilon_ijab[four_idx(m, j, a, b, nso)]))/epsilon_ijab[four_idx(m, j, a, b, nso)]);
+
+                            Z_MP2->add(0, n, m, t3);}
+
+                        else{
+
+
+                            double t3;
+
+                            t3 = so_ints[four_idx(m, j, a, b, nso)] * so_ints[four_idx(a, b, n, j, nso)] * (4.0*S_const*pow(e,-2.0*S_const*epsilon_ijab[four_idx(m, j, a, b, nso)]*epsilon_ijab[four_idx(m, j, a, b, nso)])-(1.0-pow(e,-2.0*S_const*epsilon_ijab[four_idx(m, j, a, b, nso)]*epsilon_ijab[four_idx(m, j, a, b, nso)]))/epsilon_ijab[four_idx(m, j, a, b, nso)]/epsilon_ijab[four_idx(m, j, a, b, nso)]);
+
+                            Z_MP2->add(0, n, m, t3);
+
+                        }
+                        }
                     }
                 }
             }
@@ -735,18 +777,40 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
                     for(int j = 0; j < 2 * doccpi; ++j){
 
                         if(c!=d){
-                        double t4 = amp_t[four_idx(i, j, a, c, nso)] * amp_t[four_idx(i, j, a, d, nso)];
 
-                        D_MP2->add(0, d, c, 0.5 * t4);}
-                    
+                        if(fabs(epsilon[c]-epsilon[d]) > 1e-6){
+
+                            double t4;
+
+                            t4 = 1.0/(epsilon[d]-epsilon[c])*amp_t[four_idx(i, j, a, c, nso)]*amp_t[four_idx(i, j, a, d, nso)]*(epsilon_ijab[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])) - epsilon_ijab[four_idx(i, j, a, d, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)])));
+
+                            Z_MP2->add(0, d, c, t4);}
+
+                        else{
+
+                            double t4;
+                            t4 = so_ints[four_idx(i, j, a, c, nso)]*so_ints[four_idx(i, j, a, d, nso)]*(-4.0*S_const*pow(e,-2.0*S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])+(1.0-pow(e,-2.0*S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)]))/epsilon_ijab[four_idx(i, j, a, c, nso)]/epsilon_ijab[four_idx(i, j, a, c, nso)]);
+
+                            Z_MP2->add(0, d, c, t4);
+
+                        }
+                        }
                     }
                 }
             }
         }
     }    
 
-Z_MP2->copy(D_MP2);
-Z_MP2->Matrix::scale(2.0);
+
+
+
+Z_MP2->print();
+
+
+
+
+
+
 Z_temp->copy(Z_MP2);
 
 
@@ -766,7 +830,7 @@ for ( int times = 0; times < 100; ++times){
                 for(int a = 2 * doccpi; a < nso; a++){
                     for(int b = 2 * doccpi; b < nso; ++b){
 
-                        T_1 += so_ints[four_idx(c, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)]; 
+                        T_1 += so_ints[four_idx(c, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(n, j, a, b, nso)]*epsilon_ijab[four_idx(n, j, a, b, nso)])); 
                     }
                 }
             }
@@ -774,101 +838,62 @@ for ( int times = 0; times < 100; ++times){
 
             for(int i = 0; i < 2 * doccpi; ++i){
                 for(int j = 0; j < 2 * doccpi; ++j){
-                    for(int b = 2 * doccpi; b < nso; ++b){
+                    for(int a = 2 * doccpi; a < nso; ++a){
 
-                        T_2 -= so_ints[four_idx(i, j, n, b, nso)] * amp_t[four_idx(i, j, c, b, nso)]; 
+                        T_2 -= so_ints[four_idx(i, j, a, n, nso)] * amp_t[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])); 
                     }
                 }
             }
 
 
             for(int i = 0; i < 2 * doccpi; ++i){
-
                 for(int j = 0; j < 2 * doccpi; ++j){
-                    for(int k = 0; k < 2 * doccpi; ++k){
-                        for(int a = 2 * doccpi; a < nso; ++a){
-                            for(int b = 2 * doccpi; b < nso; ++b){
+                    for(int a = 2 * doccpi; a < nso; ++a){
+                        for(int b = 2 * doccpi; b < nso; ++b){
 
-                 
-                                T_4 -=  so_ints[four_idx(i, n, j, c, nso)]*amp_t[four_idx(i, k, a, b, nso)]*amp_t[four_idx(j, k, a, b, nso)];   
 
-                            }
+
+                            T_4 -= (so_ints[four_idx(i, c, i, n, nso)]-so_ints[four_idx(a, c, a, n, nso)])*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
+
+
                         }
                     }
                 }
-
             }
 
+
             for(int i = 0; i < 2 * doccpi; ++i){
-
                 for(int j = 0; j < 2 * doccpi; ++j){
-                    for(int d = 2 * doccpi; d < nso; ++d){
-                        for(int a = 2 * doccpi; a < nso; ++a){
-                            for(int b = 2 * doccpi; b < nso; ++b){
+                    for(int a = 2 * doccpi; a < nso; ++a){
+                        for(int b = 2 * doccpi; b < nso; ++b){
 
-                 
-                                T_5 +=  so_ints[four_idx(a, n, b, c, nso)]*amp_t[four_idx(i, j, a, d, nso)]*amp_t[four_idx(i, j, b, d, nso)];   
 
-                            }
+
+                            T_5 += 4.0*S_const*(so_ints[four_idx(i, c, i, n, nso)]-so_ints[four_idx(a, c, a, n, nso)])*so_ints[four_idx(i, j, a, b, nso)]*so_ints[four_idx(i, j, a, b, nso)]*pow(e, -2.0*S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]);
+
+
                         }
                     }
                 }
-
             }
 
-            for(int i = 0; i < 2 * doccpi; ++i){
-                for(int a = 2 * doccpi; a < nso; ++a){
 
-                    T_3+=Z_MP2->get(0,i,a)*(so_ints[four_idx(i, n, a, c, nso)]+so_ints[four_idx(a, n, i, c, nso)]);
 
+   
+
+
+            for(int p = 0; p < nso; ++p){
+                for(int q = 0; q < nso; ++q){
+
+                    if (p != q){
+                        T_3 += so_ints[four_idx(p, n, q, c, nso)] * Z_MP2->get(0, q, p);
+                    }
 
                 }
-            }        
+            }
 
 
-            // for(int p = 0; p < nso; ++p){
-            //     for(int q = 0; q < nso; ++q){
 
-            //         if (p != q){
-            //             T_3 += so_ints[four_idx(p, n, q, c, nso)] * Z_MP2->get(0, q, p);
-            //         }
-
-            //     }
-            // }
-
-
-            // for(int i = 0; i < 2 * doccpi; ++i){
-
-            //     double temp = 0.0;
-
-            //     for(int j = 0; j < 2 * doccpi; ++j){
-            //         for(int a = 2 * doccpi; a < nso; ++a){
-            //             for(int b = 2 * doccpi; b < nso; ++b){
-
-            //                 temp -= amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)]; 
-            //             }
-            //         }
-            //     }
-
-            //     T_4 += temp * so_ints[four_idx(i, n, i, c, nso)];
-            // }
-
-
-            // for(int a = 2 * doccpi; a < nso; ++a){
-
-            //     double temp = 0.0;
-
-            //     for(int i = 0; i < 2 * doccpi; ++i){
-            //         for(int j = 0; j < 2 * doccpi; ++j){
-            //             for(int b = 2 * doccpi; b < nso; ++b){
-
-            //                 temp += amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)]; 
-            //             }
-            //         }
-            //     }
-
-            //     T_5 += temp * so_ints[four_idx(a, n, a, c, nso)];
-            // }
 
             Z_temp->set(0, n, c, (T_1 + T_2 + T_3 + T_4 + T_5) / (epsilon[n] - epsilon[c]));
             Z_temp->set(0, c, n, Z_temp->get(0, n, c));
@@ -878,19 +903,67 @@ for ( int times = 0; times < 100; ++times){
     Z_MP2->copy(Z_temp);
 }
 
-for(int i = 2*doccpi;i<nso;++i){
-    for(int a = 0;a<2*doccpi;++a){
-        D_MP2->set(0,i,a,0.5*Z_MP2->get(0,i,a));
-                D_MP2->set(0,a,i,0.5*Z_MP2->get(0,a,i));
 
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
+// for(int i = 2*doccpi;i<nso;++i){
+//     for(int a = 0;a<2*doccpi;++a){
+//         D_MP2->set(0,i,a,0.5*Z_MP2->get(0,i,a));
+//                 D_MP2->set(0,a,i,0.5*Z_MP2->get(0,a,i));
+
+//     }
+// }
 
 /* print the density */
     
-    D_MP2->print();
+    Z_MP2->print();
 
 /* print the density */
+
+
+
+    D_MP2->copy(Z_MP2);
+    D_MP2->Matrix::scale(0.5);
+    
+    D_MP2->print();
+
+    for(int i = 0; i < 2 * doccpi; ++i){
+        for(int j = 0; j < 2 * doccpi; ++j){
+            for(int a = 2 * doccpi; a < nso; ++a){
+                for(int b = 2 * doccpi; b < nso; ++b){
+
+                    double t2,t3;
+
+                    t2 = -2.0*S_const*so_ints[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])-0.5*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*(1.0+pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))+2.0*S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
+                    t3 = -t2;
+                    D_MP2->add(0, i, i, t2);
+                    D_MP2->add(0, a, a, t3);
+
+                }
+            }
+        }
+    }
+
+    D_MP2->print();
+
+
+
+
+
+
+
+
+
+
 
 
 
