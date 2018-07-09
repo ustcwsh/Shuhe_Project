@@ -44,7 +44,7 @@
 #include <iomanip>
 #include <vector>
 
-double e = 2.718281828;
+double e=2.718281828;
 
 
 namespace psi{ namespace scf_plug {
@@ -608,18 +608,11 @@ C_pert = Matrix::doublet(C_uptp, U_pert, false, false);
 /********** !!!!!This is the test area, remember to remove this section to rewind !!!!! *************/
 
 
-
 // F_MO->copy(F_MO_uptp);
 
 
 
 
-
-// F_MO->copy(F_MO_1);
-// C_uptp->copy(C_pert);
-
-
-/******** This is for oovv block finite analysis **********/
 
 C_uptp->copy(C);
 AO2MO_FockMatrix(F, F_MO, C, nmo);
@@ -642,6 +635,7 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
     size_t nso4 = nso2 * nso2;
     std::vector<double> so_ints(nso4, 0.0);
     std::vector<double> amp_t(nso4, 0.0);
+    std::vector<double> amp_t_dsrg(nso4, 0.0);
     std::vector<double> epsilon(nso, 0.0);
     std::vector<double> epsilon_ijab(nso4, 0.0);
 
@@ -685,7 +679,11 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
                     so_ints[four_idx(p, q, r, s, nso)] = integral;
 
                     if(p < 2 * doccpi && q < 2 * doccpi && r >= 2 * doccpi && s >= 2 * doccpi){
-                    amp_t[four_idx(p, q, r, s, nso)] = integral / epsilon_ijab[four_idx(p, q, r, s, nso)];}
+
+                        amp_t[four_idx(p, q, r, s, nso)] = integral / epsilon_ijab[four_idx(p, q, r, s, nso)];
+                        amp_t_dsrg[four_idx(p, q, r, s, nso)] = integral / epsilon_ijab[four_idx(p, q, r, s, nso)] * (1.0-pow(e,-S_const*epsilon_ijab[four_idx(p, q, r, s, nso)]*epsilon_ijab[four_idx(p, q, r, s, nso)]));
+
+                    }
 
                 }
             }
@@ -717,25 +715,27 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
 
 
 
+    for(int i = 0; i < 2 * doccpi; ++i){
+        for(int j = 0; j < 2 * doccpi; ++j){
+            for(int a = 2 * doccpi; a < nso; ++a){
+                for(int b = 2 * doccpi; b < nso; ++b){
 
+                    double t2,t3;
 
+                    // t2 = -2.0*S_const*so_ints[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])-0.5*amp_t_dsrg[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*(1.0+pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))+2.0*S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
+                    // t3 = -t2;
 
+                    t2 = -0.5*amp_t_dsrg[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*(1.0+pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))+2.0*S_const*so_ints[four_idx(i, j, a, b, nso)]*so_ints[four_idx(i, j, a, b, nso)]*pow(e,-2.0*S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]);
+                    t3 = -t2;
 
+                    D_MP2->add(0, i, i, t2);
+                    D_MP2->add(0, a, a, t3);
 
-    // for(int i = 0; i < 2 * doccpi; ++i){
-    //     for(int j = 0; j < 2 * doccpi; ++j){
-    //         for(int a = 2 * doccpi; a < nso; ++a){
-    //             for(int b = 2 * doccpi; b < nso; ++b){
+                }
+            }
+        }
+    }
 
-    //                 double t2 = amp_t[four_idx(i, j, a, b, nso)] * amp_t[four_idx(i, j, a, b, nso)];
-
-    //                 D_MP2->add(0, i, i, -0.5 * t2);
-    //                 D_MP2->add(0, a, a, 0.5 * t2);
-
-    //             }
-    //         }
-    //     }
-    // }
 
     for(int m = 0; m < 2 * doccpi; ++m){
         for(int n = 0; n < 2 * doccpi; ++n){
@@ -768,7 +768,7 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
                 }
             }
         }
-    }    
+    }   
 
     for(int c = 2 * doccpi; c < nso; ++c){
         for(int d = 2 * doccpi; d < nso; ++d){
@@ -782,7 +782,7 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
 
                             double t4;
 
-                            t4 = 1.0/(epsilon[d]-epsilon[c])*amp_t[four_idx(i, j, a, c, nso)]*amp_t[four_idx(i, j, a, d, nso)]*(epsilon_ijab[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])) - epsilon_ijab[four_idx(i, j, a, d, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)])));
+                            t4 = 1.0/(epsilon[d]-epsilon[c])*amp_t_dsrg[four_idx(i, j, a, c, nso)]*amp_t_dsrg[four_idx(i, j, a, d, nso)]*(epsilon_ijab[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])) - epsilon_ijab[four_idx(i, j, a, d, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, d, nso)]*epsilon_ijab[four_idx(i, j, a, d, nso)])));
 
                             Z_MP2->add(0, d, c, t4);}
 
@@ -803,15 +803,9 @@ AO2MO_FockMatrix(F, F_MO, C, nmo);
 
 
 
-
-Z_MP2->print();
-
-
-
-
-
-
 Z_temp->copy(Z_MP2);
+
+
 
 
 
@@ -830,7 +824,7 @@ for ( int times = 0; times < 100; ++times){
                 for(int a = 2 * doccpi; a < nso; a++){
                     for(int b = 2 * doccpi; b < nso; ++b){
 
-                        T_1 += so_ints[four_idx(c, j, a, b, nso)] * amp_t[four_idx(n, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(n, j, a, b, nso)]*epsilon_ijab[four_idx(n, j, a, b, nso)])); 
+                        T_1 += so_ints[four_idx(c, j, a, b, nso)] * amp_t_dsrg[four_idx(n, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(n, j, a, b, nso)]*epsilon_ijab[four_idx(n, j, a, b, nso)])); 
                     }
                 }
             }
@@ -840,7 +834,7 @@ for ( int times = 0; times < 100; ++times){
                 for(int j = 0; j < 2 * doccpi; ++j){
                     for(int a = 2 * doccpi; a < nso; ++a){
 
-                        T_2 -= so_ints[four_idx(i, j, a, n, nso)] * amp_t[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])); 
+                        T_2 -= so_ints[four_idx(i, j, a, n, nso)] * amp_t_dsrg[four_idx(i, j, a, c, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, c, nso)]*epsilon_ijab[four_idx(i, j, a, c, nso)])); 
                     }
                 }
             }
@@ -853,7 +847,7 @@ for ( int times = 0; times < 100; ++times){
 
 
 
-                            T_4 -= (so_ints[four_idx(i, c, i, n, nso)]-so_ints[four_idx(a, c, a, n, nso)])*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
+                            T_4 -= (so_ints[four_idx(i, c, i, n, nso)]-so_ints[four_idx(a, c, a, n, nso)])*amp_t_dsrg[four_idx(i, j, a, b, nso)]*amp_t_dsrg[four_idx(i, j, a, b, nso)]*(1.0+pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e, -S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
 
 
                         }
@@ -878,10 +872,6 @@ for ( int times = 0; times < 100; ++times){
             }
 
 
-
-   
-
-
             for(int p = 0; p < nso; ++p){
                 for(int q = 0; q < nso; ++q){
 
@@ -891,8 +881,6 @@ for ( int times = 0; times < 100; ++times){
 
                 }
             }
-
-
 
 
             Z_temp->set(0, n, c, (T_1 + T_2 + T_3 + T_4 + T_5) / (epsilon[n] - epsilon[c]));
@@ -908,61 +896,17 @@ for ( int times = 0; times < 100; ++times){
 
 
 
+    for(int p = 0; p < nso; ++p){
+        for(int q = 0; q < nso; ++q){
 
+            if(p!=q) {D_MP2->set(0,p,q,0.5*Z_MP2->get(0,p,q));}
 
-
-
-
-
-
-// for(int i = 2*doccpi;i<nso;++i){
-//     for(int a = 0;a<2*doccpi;++a){
-//         D_MP2->set(0,i,a,0.5*Z_MP2->get(0,i,a));
-//                 D_MP2->set(0,a,i,0.5*Z_MP2->get(0,a,i));
-
-//     }
-// }
-
-/* print the density */
-    
-    Z_MP2->print();
-
-/* print the density */
-
-
-
-    D_MP2->copy(Z_MP2);
-    D_MP2->Matrix::scale(0.5);
-    
-    D_MP2->print();
-
-    for(int i = 0; i < 2 * doccpi; ++i){
-        for(int j = 0; j < 2 * doccpi; ++j){
-            for(int a = 2 * doccpi; a < nso; ++a){
-                for(int b = 2 * doccpi; b < nso; ++b){
-
-                    double t2,t3;
-
-                    t2 = -2.0*S_const*so_ints[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])-0.5*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*(1.0+pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))+2.0*S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*amp_t[four_idx(i, j, a, b, nso)]*pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)])/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]))/(1.0-pow(e,-S_const*epsilon_ijab[four_idx(i, j, a, b, nso)]*epsilon_ijab[four_idx(i, j, a, b, nso)]));
-                    t3 = -t2;
-                    D_MP2->add(0, i, i, t2);
-                    D_MP2->add(0, a, a, t3);
-
-                }
-            }
         }
     }
 
+
+
     D_MP2->print();
-
-
-
-
-
-
-
-
-
 
 
 
@@ -979,22 +923,6 @@ for ( int times = 0; times < 100; ++times){
         }
     }
 
-
-    // for(int i = 0; i < 2 * doccpi; ++i){
-    //     for(int j = 0; j < 2 * doccpi; ++j){
-
-    //         dipole_MP2 += D_MP2[two_idx(i, j, nso)] * Dp_mo->get(0, i/2, j/2);
-
-    //     }
-    // }
-
-    // for(int a = 2 * doccpi; a < nso; ++a){
-    //     for(int b = 2 * doccpi; b < nso; ++b){
-
-    //         dipole_MP2 += D_MP2[two_idx(a, b, nso)] * Dp_mo->get(0, a/2, b/2);
-
-    //     }
-    // }
 
 
     Emp2 = MP2_Energy_SO(eri_mo, F_MO, nso, doccpi, so_ints, epsilon_ijab );
