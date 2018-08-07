@@ -72,30 +72,55 @@ double ElecEnergy(double Elec, SharedMatrix D, SharedMatrix H, SharedMatrix F, i
 
 void AO2MO_TwoElecInts(SharedMatrix eri, SharedMatrix eri_mo, SharedMatrix C, int nmo)
 {
+    int dims[] = {0};
+    dims[0] = nmo;
+    SharedMatrix X (new Matrix("X", 1, dims, dims, 0));
+    SharedMatrix Y (new Matrix("Y", 1, dims, dims, 0));
+    SharedMatrix eri_temp = eri->clone();
+                 eri_temp->zero();
+
     for(int i = 0; i < nmo; ++i)
     {
         for(int j = 0; j < nmo; ++j)
         {
             for(int k = 0; k < nmo; ++k)
             {
+                for(int l = 0; l <= k; ++l)
+                {
+                    X->set(0, k, l, eri->get(0, i * nmo + j, k * nmo +l));
+                    X->set(0, l, k, X->get(0, k, l));                 
+                }
+            }
+            Y = Matrix::triplet(C, X, C, true, false, false);
+            for(int k = 0; k < nmo; ++k)
+            {
                 for(int l = 0; l < nmo; ++l)
                 {
-                    double ints_temp = 0.0;
-
-                    for(int p = 0; p < nmo; ++p)
-                    {
-                        for(int q = 0; q < nmo; ++q)
-                        {
-                            for(int r = 0; r < nmo; ++r)
-                            {
-                                for(int s = 0; s < nmo; ++s)
-                                {
-                                    ints_temp +=  eri->get(0, p * nmo + q, r * nmo + s) * C->get(0, s, l) * C->get(0, r, k) * C->get(0, q, j) * C->get(0, p, i);
-                                }
-                            }
-                        }
-                    }
-                    eri_mo->set(0, i * nmo + j, k * nmo + l, ints_temp);
+                    eri_temp->set(0, k * nmo + l, i * nmo + j, Y->get(0, k, l));      
+                }
+            }        
+        }
+    }
+    for(int k = 0; k < nmo; ++k)
+    {
+        for(int l = 0; l < nmo; ++l)
+        {
+            X->zero();
+            Y->zero();
+            for(int i = 0; i < nmo; ++i)
+            {
+                for(int j = 0; j <= i; ++j)
+                {
+                    X->set(0, i, j, eri_temp->get(0, k * nmo + l, i * nmo +j));
+                    X->set(0, j, i, X->get(0, i, j));                     
+                }
+            }
+            Y = Matrix::triplet(C, X, C, true, false, false);
+            for(int i = 0; i < nmo; ++i)
+            {
+                for(int j = 0; j < nmo; ++j)
+                {
+                    eri_mo->set(0, k * nmo + l, i * nmo +j, Y->get(0, i, j));
                 }
             }
         }
@@ -207,7 +232,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     int      nmo = dims[0];
     size_t   nso = 2 * dims[0];
     int      frozen_c = 2;
-    int      frozen_v = 12;
+    int      frozen_v = 14;
     std::shared_ptr<MatrixFactory> factory(new MatrixFactory);
     factory->init_with(1, dims, dims);
     SharedMatrix overlap = mints.ao_overlap();
