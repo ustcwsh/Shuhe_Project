@@ -24,6 +24,9 @@ int read_options(std::string name, Options& options)
     if (name == "SCF_PLUG"|| options.read_globals()) {
         options.add_int("PRINT", 0);
         options.add_int("GRADIENT", 0);
+        options.add_int("FROZEN_CORE", 0);
+        options.add_int("FROZEN_VIRTUAL", 0);
+        options.add_int("PERT_DIRECTION", 0);
         options.add_double("CVG", 0);
         options.add_double("PERT", 0);
         options.add_double("S", 0);
@@ -239,7 +242,7 @@ double DSRG_PT2_Energy_SO(SharedMatrix eri_mo, SharedMatrix F_MO, int nso, int d
 
 
 
-double DSRG_PT2_Energy_MO(SharedMatrix eri_mo, SharedMatrix F_MO, int nmo, int doccpi, std::vector<double> mo_ints_aa, std::vector<double> mo_ints_bb, std::vector<double> mo_ints_ab, std::vector<double> epsilon_ijab_aa, std::vector<double> epsilon_ijab_bb, std::vector<double> epsilon_ijab_ab, double S, int frozen_c, int frozen_v)
+double DSRG_PT2_Energy_MO(SharedMatrix eri_mo, SharedMatrix F_MO, int nmo, int doccpi, std::vector<double> mo_ints_aa, std::vector<double> mo_ints_bb, std::vector<double> mo_ints_ab, std::vector<double> epsilon_ijab_aa, double S, int frozen_c, int frozen_v)
 {
     double Edsrgpt2 = 0.0;
     int idx, idx1, idx2, idx3;
@@ -259,11 +262,11 @@ double DSRG_PT2_Energy_MO(SharedMatrix eri_mo, SharedMatrix F_MO, int nmo, int d
                     idx3 = j * nmo * nmo * nmo + i * nmo * nmo + b * nmo + a;
                     
                     Edsrgpt2 += 0.25 * mo_ints_aa[idx] * mo_ints_aa[idx] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
-                    Edsrgpt2 += 0.25 * mo_ints_bb[idx] * mo_ints_bb[idx] / epsilon_ijab_bb[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_bb[idx] * epsilon_ijab_bb[idx]));
-                    Edsrgpt2 +=  1.0 * mo_ints_ab[idx] * mo_ints_ab[idx] / epsilon_ijab_ab[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_ab[idx] * epsilon_ijab_ab[idx]));
-                    // Edsrgpt2 += 0.25 * mo_ints_ab[idx1] * mo_ints_ab[idx1] / epsilon_ijab_ab[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_ab[idx] * epsilon_ijab_ab[idx]));
-                    // Edsrgpt2 += 0.25 * mo_ints_ab[idx2] * mo_ints_ab[idx2] / epsilon_ijab_ab[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_ab[idx] * epsilon_ijab_ab[idx]));
-                    // Edsrgpt2 += 0.25 * mo_ints_ab[idx3] * mo_ints_ab[idx3] / epsilon_ijab_ab[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_ab[idx] * epsilon_ijab_ab[idx]));
+                    Edsrgpt2 += 0.25 * mo_ints_bb[idx] * mo_ints_bb[idx] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
+                    Edsrgpt2 += 0.25 * mo_ints_ab[idx] * mo_ints_ab[idx] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
+                    Edsrgpt2 += 0.25 * mo_ints_ab[idx1] * mo_ints_ab[idx1] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
+                    Edsrgpt2 += 0.25 * mo_ints_ab[idx2] * mo_ints_ab[idx2] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
+                    Edsrgpt2 += 0.25 * mo_ints_ab[idx3] * mo_ints_ab[idx3] / epsilon_ijab_aa[idx] * (1.0 - pow(e, -2.0 * S * epsilon_ijab_aa[idx] * epsilon_ijab_aa[idx]));
                 
 
 
@@ -292,7 +295,7 @@ double DSRG_PT2_Energy_MO(SharedMatrix eri_mo, SharedMatrix F_MO, int nmo, int d
 
 
 
-void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) 
+void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp, int direction) 
 {
     std::shared_ptr<BasisSet> basisset = wfn->basisset();
     std::shared_ptr<IntegralFactory> ints_fac = std::make_shared<IntegralFactory>(basisset);
@@ -306,7 +309,7 @@ void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp)
     }
     std::shared_ptr<OneBodyAOInt> aodOBI(ints_fac->ao_dipole());
     aodOBI->compute(AOdipole_ints_);
-    Dp->copy(AOdipole_ints_[2]);
+    Dp->copy(AOdipole_ints_[direction]);
 }
 
 extern "C" PSI_API
@@ -321,6 +324,7 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     int      dims[] = {ao_basisset->nbf()};
     int      print = options.get_int("PRINT");
     int      gradient = options.get_int("GRADIENT");
+    int      pert_drt = options.get_int("PERT_DIRECTION");
     double   CVG = options.get_double("CVG");
     double   pert = options.get_double("PERT");
     double   S_const = options.get_double("S");
@@ -332,8 +336,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     int      irrep_num = ref_wfn->nirrep();
     int      nmo = dims[0];
     size_t   nso = 2 * dims[0];
-    int      frozen_c = 2;
-    int      frozen_v = 14;
+    int      frozen_c = options.get_int("FROZEN_CORE");
+    int      frozen_v = options.get_int("FROZEN_VIRTUAL");
     std::shared_ptr<MatrixFactory> factory(new MatrixFactory);
     factory->init_with(1, dims, dims);
     SharedMatrix overlap = mints.ao_overlap();
@@ -366,6 +370,9 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix eri_mo = eri->clone();
                  eri_mo->zero();
     SharedMatrix Dp (new Matrix("Dipole correction matrix", 1, dims, dims, 0));
+    SharedMatrix Dp_x (new Matrix("Dipole correction matrix x direction", 1, dims, dims, 0));
+    SharedMatrix Dp_y (new Matrix("Dipole correction matrix y direction", 1, dims, dims, 0));
+    SharedMatrix Dp_z (new Matrix("Dipole correction matrix z direction", 1, dims, dims, 0));
     SharedMatrix Dp_temp (new Matrix("Dipole correction matrix Copy", 1, dims, dims, 0));
     SharedMatrix evecs (new Matrix("evecs", 1, dims, dims, 0));
     SharedVector evals (new Vector("evals", 1, dims));
@@ -402,7 +409,10 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     H->copy(kinetic);
     H->add(potential);
     H_uptb->copy(H);
-    build_AOdipole_ints(ref_wfn, Dp);
+    build_AOdipole_ints(ref_wfn, Dp, pert_drt);
+    build_AOdipole_ints(ref_wfn, Dp_x, 0);
+    build_AOdipole_ints(ref_wfn, Dp_y, 1);
+    build_AOdipole_ints(ref_wfn, Dp_z, 2);
     Dp_temp->copy(Dp);
     Dp->Matrix::scale(pert);
     H->add(Dp);
@@ -475,7 +485,16 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     SharedMatrix Dp_d (new Matrix("dipole diagonal matrix", 1, dims, dims, 0));
     Dp_d->zero();
     SharedMatrix Dp_mo = Dp->clone();    
-    AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, nmo);    
+    AO2MO_FockMatrix(Dp, Dp_mo, C_uptp, nmo);
+
+    SharedMatrix Dp_x_mo = Dp_x->clone();    
+    AO2MO_FockMatrix(Dp_x, Dp_x_mo, C_uptp, nmo);
+
+    SharedMatrix Dp_y_mo = Dp_y->clone();    
+    AO2MO_FockMatrix(Dp_y, Dp_y_mo, C_uptp, nmo);
+
+    SharedMatrix Dp_z_mo = Dp_z->clone();    
+    AO2MO_FockMatrix(Dp_z, Dp_z_mo, C_uptp, nmo);       
     /* dipole OV,OO,VV block */
     Dp_d->copy(Dp_mo);
     Dp_d->Matrix::scale(pert);
@@ -491,8 +510,6 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     AO2MO_FockMatrix(F_b, F_MO_b, C_b, nmo);
 
      /************** TEST ****************/
-    // F_MO_b->print();
-    // F_MO_a->print();
 
 
 
@@ -579,15 +596,9 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     std::vector<double> epsilon_a(nmo, 0.0);
     std::vector<double> epsilon_ijab_aa(nmo4, 0.0);
 
-/*********** Sept 6 ****************/
-    std::vector<double> epsilon_b(nmo, 0.0);
-    std::vector<double> epsilon_ijab_bb(nmo4, 0.0);
-     std::vector<double> epsilon_ijab_ab(nmo4, 0.0);
-
 
     for (size_t p = 0; p < nmo; ++p){
-        epsilon_a[p] = F_MO_a->get(0, p, p);
-        epsilon_b[p] = F_MO_b->get(0, p, p);
+        epsilon_a[p] = F_MO->get(0, p, p);
     }
     
 
@@ -600,8 +611,6 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                 for (size_t b = doccpi; b < nmo; ++b)
                 {
                     epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] = epsilon_a[i] + epsilon_a[j] - epsilon_a[a] - epsilon_a[b];
-                    epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] = epsilon_b[i] + epsilon_b[j] - epsilon_b[a] - epsilon_b[b];
-                    epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] = epsilon_a[i] + epsilon_b[j] - epsilon_a[a] - epsilon_b[b];
                 }
             }
         }
@@ -661,8 +670,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                     if(p < doccpi && q < doccpi && r >= doccpi && s >= doccpi)
                     {
                         amp_t_dsrg_aa[four_idx(p, q, r, s, nmo)] = mo_ints_aa[four_idx(p, q, r, s, nmo)] / epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)]));
-                        amp_t_dsrg_bb[four_idx(p, q, r, s, nmo)] = mo_ints_bb[four_idx(p, q, r, s, nmo)] / epsilon_ijab_bb[four_idx(p, q, r, s, nmo)] * (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(p, q, r, s, nmo)] * epsilon_ijab_bb[four_idx(p, q, r, s, nmo)]));
-                        amp_t_dsrg_ab[four_idx(p, q, r, s, nmo)] = mo_ints_ab[four_idx(p, q, r, s, nmo)] / epsilon_ijab_ab[four_idx(p, q, r, s, nmo)] * (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(p, q, r, s, nmo)] * epsilon_ijab_ab[four_idx(p, q, r, s, nmo)]));
+                        amp_t_dsrg_bb[four_idx(p, q, r, s, nmo)] = mo_ints_bb[four_idx(p, q, r, s, nmo)] / epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)]));
+                        amp_t_dsrg_ab[four_idx(p, q, r, s, nmo)] = mo_ints_ab[four_idx(p, q, r, s, nmo)] / epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)] * epsilon_ijab_aa[four_idx(p, q, r, s, nmo)]));
                     }
                 }
             }
@@ -770,8 +779,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                     double temp3 ;
 
                     temp1 = -0.5 *  amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) + 2.0 * S_const * mo_ints_aa[four_idx(i, j, a, b, nmo)] * mo_ints_aa[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
-                    temp2 = -0.5 *  amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)])) + 2.0 * S_const * mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]);
-                    temp3 = 2.0 * ( -0.5 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) + 2.0 * S_const * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]));
+                    temp2 = -0.5 *  amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) + 2.0 * S_const * mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
+                    temp3 = 2.0 * ( -0.5 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) + 2.0 * S_const * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
                     D_MP2->add(0, 2*i, 2*i, temp1 + temp3);
                     D_MP2->add(0, 2*i+1, 2*i+1, temp2 + temp3);
                     D_MP2->add(0, 2*a, 2*a, -temp1 - temp3);
@@ -837,8 +846,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                                 double temp3;
 
                                 temp1  = 1.0 / (epsilon_a[n] - epsilon_a[m]) * mo_ints_aa[four_idx(m, j, a, b, nmo)] * mo_ints_aa[four_idx(a, b, n, j, nmo)] * ((1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
-                                temp2  = 1.0 / (epsilon_a[n] - epsilon_a[m]) * mo_ints_bb[four_idx(m, j, a, b, nmo)] * mo_ints_bb[four_idx(a, b, n, j, nmo)] * ((1.0 - pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)])) / epsilon_ijab_bb[four_idx(n, j, a, b, nmo)] - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_bb[four_idx(m, j, a, b, nmo)]);
-                                temp3  = 2.0 / (epsilon_a[n] - epsilon_a[m]) * mo_ints_ab[four_idx(m, j, a, b, nmo)] * mo_ints_ab[four_idx(a, b, n, j, nmo)] * ((1.0 - pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)])) / epsilon_ijab_ab[four_idx(n, j, a, b, nmo)] - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_ab[four_idx(m, j, a, b, nmo)]);
+                                temp2  = 1.0 / (epsilon_a[n] - epsilon_a[m]) * mo_ints_bb[four_idx(m, j, a, b, nmo)] * mo_ints_bb[four_idx(a, b, n, j, nmo)] * ((1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
+                                temp3  = 2.0 / (epsilon_a[n] - epsilon_a[m]) * mo_ints_ab[four_idx(m, j, a, b, nmo)] * mo_ints_ab[four_idx(a, b, n, j, nmo)] * ((1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
                                 Z_MP2->add(0, 2*n, 2*m, temp1 + temp3);
                                 Z_MP2->add(0, 2*n+1, 2*m+1, temp2 + temp3);
                             }
@@ -849,8 +858,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                                 double temp3;
 
                                 temp1 = mo_ints_aa[four_idx(m, j, a, b, nmo)] * mo_ints_aa[four_idx(a, b, n, j, nmo)] * (4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]) - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
-                                temp2 = mo_ints_bb[four_idx(m, j, a, b, nmo)] * mo_ints_bb[four_idx(a, b, n, j, nmo)] * (4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)]) - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_bb[four_idx(m, j, a, b, nmo)] / epsilon_ijab_bb[four_idx(m, j, a, b, nmo)]);
-                                temp3 = mo_ints_ab[four_idx(m, j, a, b, nmo)] * mo_ints_ab[four_idx(a, b, n, j, nmo)] * (4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)]) - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_ab[four_idx(m, j, a, b, nmo)] / epsilon_ijab_ab[four_idx(m, j, a, b, nmo)]);
+                                temp2 = mo_ints_bb[four_idx(m, j, a, b, nmo)] * mo_ints_bb[four_idx(a, b, n, j, nmo)] * (4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]) - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
+                                temp3 = mo_ints_ab[four_idx(m, j, a, b, nmo)] * mo_ints_ab[four_idx(a, b, n, j, nmo)] * (4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]) - (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(m, j, a, b, nmo)])) / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)] / epsilon_ijab_aa[four_idx(m, j, a, b, nmo)]);
                                 Z_MP2->add(0, 2*n, 2*m, temp1 + temp3);
                                 Z_MP2->add(0, 2*n+1, 2*m+1, temp2 + temp3);
                             }
@@ -918,8 +927,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                                 double temp3;
 
                                 temp1 = 1.0 / (epsilon_a[d] - epsilon_a[c]) * amp_t_dsrg_aa[four_idx(i, j, a, c, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, d, nmo)] * (epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) - epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])));
-                                temp2 = 1.0 / (epsilon_a[d] - epsilon_a[c]) * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, d, nmo)] * (epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)])) - epsilon_ijab_bb[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)])));
-                                temp3 = 2.0 / (epsilon_a[d] - epsilon_a[c]) * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, d, nmo)] * (epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)])) - epsilon_ijab_ab[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)])));
+                                temp2 = 1.0 / (epsilon_a[d] - epsilon_a[c]) * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, d, nmo)] * (epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) - epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])));
+                                temp3 = 2.0 / (epsilon_a[d] - epsilon_a[c]) * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, d, nmo)] * (epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) - epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)])));
                                 Z_MP2->add(0, 2*d, 2*c, temp1 + temp3);
                                 Z_MP2->add(0, 2*d+1, 2*c+1, temp2 + temp3);
                             }
@@ -930,8 +939,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                                 double temp3;
 
                                 temp1 = mo_ints_aa[four_idx(i, j, a, c, nmo)] * mo_ints_aa[four_idx(i, j, a, d, nmo)] * (-4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]) + (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]);
-                                temp2 = mo_ints_bb[four_idx(i, j, a, c, nmo)] * mo_ints_bb[four_idx(i, j, a, d, nmo)] * (-4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)]) + (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)])) / epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] / epsilon_ijab_bb[four_idx(i, j, a, c, nmo)]);
-                                temp3 = 2.0 * mo_ints_ab[four_idx(i, j, a, c, nmo)] * mo_ints_ab[four_idx(i, j, a, d, nmo)] * (-4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)]) + (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)])) / epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] / epsilon_ijab_ab[four_idx(i, j, a, c, nmo)]);
+                                temp2 = mo_ints_bb[four_idx(i, j, a, c, nmo)] * mo_ints_bb[four_idx(i, j, a, d, nmo)] * (-4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]) + (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]);
+                                temp3 = 2.0 * mo_ints_ab[four_idx(i, j, a, c, nmo)] * mo_ints_ab[four_idx(i, j, a, d, nmo)] * (-4.0 * S_const * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]) + (1.0 - pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])) / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] / epsilon_ijab_aa[four_idx(i, j, a, c, nmo)]);
                                 Z_MP2->add(0, 2*d, 2*c, temp1 + temp3);
                                 Z_MP2->add(0, 2*d+1, 2*c+1, temp2 + temp3);
                             }
@@ -981,8 +990,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                     for(int j = frozen_c/2; j < doccpi; ++j)
                     {
                         temp1 = mo_ints_aa[four_idx(N, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)]));        
-                        temp2 = mo_ints_bb[four_idx(N, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)]));        
-                        temp3 = 2.0 * mo_ints_ab[four_idx(N, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)]));        
+                        temp2 = mo_ints_bb[four_idx(N, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)]));        
+                        temp3 = 2.0 * mo_ints_ab[four_idx(N, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)]));        
                         Z_MP2->add(0, 2*n, 2*N, (temp1 + temp3) /(epsilon_a[n]-epsilon_a[N]));
                         Z_MP2->add(0, 2*n+1, 2*N+1, (temp2 + temp3) /(epsilon_a[n]-epsilon_a[N]));
                     }
@@ -1031,8 +1040,8 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                     for(int j = frozen_c/2; j < doccpi; ++j)
                     {
                         temp1 = mo_ints_aa[four_idx(i, j, a, D, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)]));        
-                        temp2 = mo_ints_bb[four_idx(i, j, a, D, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, d, nmo)]));        
-                        temp3 = 2.0 * mo_ints_ab[four_idx(i, j, a, D, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, d, nmo)]));        
+                        temp2 = mo_ints_bb[four_idx(i, j, a, D, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)]));        
+                        temp3 = 2.0 * mo_ints_ab[four_idx(i, j, a, D, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, d, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, d, nmo)]));        
                         Z_MP2->add(0, 2*d, 2*D, (temp1 + temp3) / (epsilon_a[d] - epsilon_a[D]));
                         Z_MP2->add(0, 2*d+1, 2*D+1, (temp2 + temp3) / (epsilon_a[d] - epsilon_a[D]));
                     }
@@ -1336,22 +1345,22 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
                 for(int b = doccpi; b < nmo - frozen_v/2; ++b)
                 {
                     Xi_a[i] += amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
-                    Xi_a[i] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]));
-                    Xi_b[i] += amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]));
-                    Xi_b[i] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]));
+                    Xi_a[i] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
+                    Xi_b[i] += amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
+                    Xi_b[i] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
                     Xa_a[a] += amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
-                    Xa_a[a] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]));
-                    Xa_b[a] += amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]));
-                    Xa_b[a] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]));   
+                    Xa_a[a] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
+                    Xa_b[a] += amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));
+                    Xa_b[a] += 2.0 * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)])) / (1.0 - pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]));   
                     
                     Yi_a[i] += mo_ints_aa[four_idx(i, j, a, b, nmo)] * mo_ints_aa[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
-                    Yi_a[i] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]);
-                    Yi_b[i] += mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]);
-                    Yi_b[i] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]);
+                    Yi_a[i] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
+                    Yi_b[i] += mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
+                    Yi_b[i] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
                     Ya_a[a] += mo_ints_aa[four_idx(i, j, a, b, nmo)] * mo_ints_aa[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
-                    Ya_a[a] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]);
-                    Ya_b[a] += mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]);
-                    Ya_b[a] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]);                   
+                    Ya_a[a] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
+                    Ya_b[a] += mo_ints_bb[four_idx(i, j, a, b, nmo)] * mo_ints_bb[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);
+                    Ya_b[a] += 2.0 * mo_ints_ab[four_idx(i, j, a, b, nmo)] * mo_ints_ab[four_idx(i, j, a, b, nmo)] * pow(e, -2.0 * S_const * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]);                   
                 }
             }
         }
@@ -1377,8 +1386,8 @@ for( int times = 0; times < 100; ++times)
                     for(int b = doccpi; b < nmo - frozen_v/2; ++b)
                     {
                         T1_temp1 += mo_ints_aa[four_idx(c, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
-                        T1_temp2 += mo_ints_bb[four_idx(c, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)])); 
-                        T1_temp3 += 2.0 * mo_ints_ab[four_idx(c, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)])); 
+                        T1_temp2 += mo_ints_bb[four_idx(c, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
+                        T1_temp3 += 2.0 * mo_ints_ab[four_idx(c, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
                     }
                 }
             }
@@ -1390,8 +1399,8 @@ for( int times = 0; times < 100; ++times)
                     for(int a = doccpi; a < nmo - frozen_v/2; ++a)
                     {
                         T2_temp1 -= mo_ints_aa[four_idx(i, j, a, n, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
-                        T2_temp2 -= mo_ints_bb[four_idx(i, j, a, n, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)])); 
-                        T2_temp3 -= 2.0 * mo_ints_ab[four_idx(i, j, a, n, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)])); 
+                        T2_temp2 -= mo_ints_bb[four_idx(i, j, a, n, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
+                        T2_temp3 -= 2.0 * mo_ints_ab[four_idx(i, j, a, n, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
                     }
                 }
             }
@@ -1558,8 +1567,8 @@ for( int times = 0; times < 100; ++times)
                     for(int a = doccpi; a < nmo - frozen_v/2; ++a)
                     {
                         T4_temp1 -= mo_ints_aa[four_idx(i, j, a, N, nmo)] * amp_t_dsrg_aa[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
-                        T4_temp2 -= mo_ints_bb[four_idx(i, j, a, N, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)] * epsilon_ijab_bb[four_idx(i, j, a, c, nmo)])); 
-                        T4_temp3 -= 2.0 * mo_ints_ab[four_idx(i, j, a, N, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)] * epsilon_ijab_ab[four_idx(i, j, a, c, nmo)])); 
+                        T4_temp2 -= mo_ints_bb[four_idx(i, j, a, N, nmo)] * amp_t_dsrg_bb[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
+                        T4_temp3 -= 2.0 * mo_ints_ab[four_idx(i, j, a, N, nmo)] * amp_t_dsrg_ab[four_idx(i, j, a, c, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)] * epsilon_ijab_aa[four_idx(i, j, a, c, nmo)])); 
                     }
                 }
             }
@@ -1628,8 +1637,8 @@ for( int times = 0; times < 100; ++times)
                     for(int b = doccpi; b < nmo - frozen_v/2; ++b)
                     {
                         T4_temp1 += mo_ints_aa[four_idx(C, j, a, b, nmo)] * amp_t_dsrg_aa[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
-                        T4_temp2 += mo_ints_bb[four_idx(C, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)] * epsilon_ijab_bb[four_idx(n, j, a, b, nmo)])); 
-                        T4_temp3 += 2.0 * mo_ints_ab[four_idx(C, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)] * epsilon_ijab_ab[four_idx(n, j, a, b, nmo)])); 
+                        T4_temp2 += mo_ints_bb[four_idx(C, j, a, b, nmo)] * amp_t_dsrg_bb[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
+                        T4_temp3 += 2.0 * mo_ints_ab[four_idx(C, j, a, b, nmo)] * amp_t_dsrg_ab[four_idx(n, j, a, b, nmo)] * (1.0 + pow(e, -S_const * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)] * epsilon_ijab_aa[four_idx(n, j, a, b, nmo)])); 
                     }
                 }
             }
@@ -1680,13 +1689,17 @@ for( int times = 0; times < 100; ++times)
 
 D_MP2->print();
 
-    double dipole_MP2 = 0.0;
+    double dipole_MP2_x = 0.0;
+    double dipole_MP2_y = 0.0;
+    double dipole_MP2_z = 0.0;
 
     for(int p = 0; p < nso; ++p)
     {
         for(int q = 0; q < nso; ++q)
         {
-            dipole_MP2 += D_MP2->get(0, p, q) * Dp_mo->get(0, p / 2, q / 2);
+            dipole_MP2_x += D_MP2->get(0, p, q) * Dp_x_mo->get(0, p / 2, q / 2);
+            dipole_MP2_y += D_MP2->get(0, p, q) * Dp_y_mo->get(0, p / 2, q / 2);
+            dipole_MP2_z += D_MP2->get(0, p, q) * Dp_z_mo->get(0, p / 2, q / 2);
         }
     }
 
@@ -1696,24 +1709,31 @@ D_MP2->print();
     /****** test ********/
 
     Emp2 = MP2_Energy_MO(eri_mo, F_MO, nmo, doccpi, mo_ints_aa, mo_ints_bb, mo_ints_ab, epsilon_ijab_aa, frozen_c, frozen_v);
-    Edsrg_pt2 = DSRG_PT2_Energy_MO(eri_mo, F_MO, nmo, doccpi, mo_ints_aa, mo_ints_bb, mo_ints_ab, epsilon_ijab_aa, epsilon_ijab_bb, epsilon_ijab_ab, S_const, frozen_c, frozen_v);
+    Edsrg_pt2 = DSRG_PT2_Energy_MO(eri_mo, F_MO, nmo, doccpi, mo_ints_aa, mo_ints_bb, mo_ints_ab, epsilon_ijab_aa, S_const, frozen_c, frozen_v);
 
 
-    /****** test ********/    
+    /****** test ********/
+    char drt[3];
+    drt[0]='X';
+    drt[1]='Y';  
+    drt[2]='Z';      
 
     //Output
-	std::cout << "Energy precision(SCF Iter):   "<< std::setprecision(15) << CVG << std::endl << std::endl;
+    std::cout << "Perturbation Direction:       "<< drt[pert_drt] << std::endl;
+	std::cout << "Energy Precision(SCF Iter):   "<< std::setprecision(15) << CVG << std::endl << std::endl;
 	// std::cout << "Iteration times:              "<< iternum << std::endl;
-    std::cout << "Nuclear repulsion energy:     "<< std::setprecision(15) << Enuc << std::endl;
-    std::cout << "Electronic energy:            "<< std::setprecision(15) << Elec << std::endl;
-    std::cout << "SCF energy:                   "<< std::setprecision(15) << Escf << std::endl;
-    std::cout << "MP2 energy:                   "<< std::setprecision(15) << Emp2 << std::endl;
-    std::cout << "Total energy(MP2):            "<< std::setprecision(15) << Escf + Emp2 << std::endl;
-    std::cout << "DSRG-PT2 energy:              "<< std::setprecision(15) << Edsrg_pt2 << std::endl;
-    std::cout << "Total energy(DSRG-PT2):       "<< std::setprecision(15) << Escf + Edsrg_pt2 << std::endl;
+    std::cout << "Nuclear Repulsion Energy:     "<< std::setprecision(15) << Enuc << std::endl;
+    std::cout << "Electronic Energy:            "<< std::setprecision(15) << Elec << std::endl;
+    std::cout << "SCF Energy:                   "<< std::setprecision(15) << Escf << std::endl;
+    std::cout << "MP2 Energy:                   "<< std::setprecision(15) << Emp2 << std::endl;
+    std::cout << "Total Energy(MP2):            "<< std::setprecision(15) << Escf + Emp2 << std::endl;
+    std::cout << "DSRG-PT2 Energy:              "<< std::setprecision(15) << Edsrg_pt2 << std::endl;
+    std::cout << "Total Energy(DSRG-PT2):       "<< std::setprecision(15) << Escf + Edsrg_pt2 << std::endl << std::endl;
     if(gradient)
     {
-        std::cout << "DSRG dipole:                  "<< std::setprecision(15) << dipole_MP2 << std::endl;
+        std::cout << "DSRG Dipole_x:                "<< std::setprecision(15) << dipole_MP2_x << std::endl;
+        std::cout << "DSRG Dipole_y:                "<< std::setprecision(15) << dipole_MP2_y << std::endl;
+        std::cout << "DSRG Dipole_z:                "<< std::setprecision(15) << dipole_MP2_z << std::endl;
     }
     std::cout << std::endl;
     std::cout << std::endl << std::endl << std::endl;
