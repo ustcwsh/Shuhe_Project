@@ -9,10 +9,18 @@
 #include "psi4/libmints/basisset.h"
 #include "psi4/libmints/integral.h"
 #include "psi4/libmints/dipole.h"
+#include "psi4/libmints/deriv.h"
 #include "psi4/libpsio/psio.hpp"
+#include "psi4/libiwl/iwl.hpp"
+#include "backtransform_tpdm.h"
+#include <psi4/psifiles.h>
 #include <math.h>
 #include <iomanip>
 #include <vector>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
 
 double e = 2.718281828;
 
@@ -301,6 +309,7 @@ void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp, int direction)
 extern "C" PSI_API
 SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 {
+
     //Parameters Declaration
     std::shared_ptr<Molecule> molecule = Process::environment.molecule();
     molecule->update_geometry();
@@ -414,6 +423,24 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
     }
      
     S = Matrix::triplet(evecs, Omega, evecs, false, false, true);
+
+    // std::ofstream s1;
+    // std::ofstream f_1;
+    // s1.open("trial_S_2.dat");
+    // f_1.open("trial_F_2.dat");
+    // for(int i=0;i<dims[0];++i){
+    //     for(int j=0;j<dims[0];++j){
+    //         s1<<std::setprecision(24)<< overlap->get(0,i,j)<< ' ';
+    //         f_1<<std::setprecision(24)<< F_a->get(0,i,j)<< ' ';
+        
+    //     }
+    //     s1<< std::endl;
+    //     f_1<< std::endl;
+    // }
+    // s1.close();
+    // f_1.close();
+
+
 
     //Create original fock matrix using transformation on H
 	F = Matrix::triplet(S, H, S, true, false, false);
@@ -593,6 +620,46 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
 
 
 
+
+
+
+    // std::ofstream ep1;
+    // std::ofstream ep2;
+    // std::ofstream ep3;
+    // ep1.open("trial_epaa_2.dat");
+    // ep2.open("trial_epbb_2.dat");
+    // ep3.open("trial_epab_2.dat");
+
+    // for (size_t i = 0; i < doccpi; ++i)
+    // {
+    //     for (size_t j = 0; j < doccpi; ++j)
+    //     {
+    //         for (size_t a = doccpi; a < nmo; ++a)
+    //         {
+    //             for (size_t b = doccpi; b < nmo; ++b)
+    //             {
+    //                 ep1<<std::setprecision(24)<< epsilon_ijab_aa[four_idx(i, j, a, b, nmo)]<< ' ';
+    //                 ep2<<std::setprecision(24)<< epsilon_ijab_bb[four_idx(i, j, a, b, nmo)]<< ' ';
+    //                 ep3<<std::setprecision(24)<< epsilon_ijab_ab[four_idx(i, j, a, b, nmo)]<< ' ';
+    //             }
+    //         }
+    //     }   
+    // }
+    // ep1.close();
+    // ep2.close();
+    // ep3.close();
+
+
+
+
+
+
+
+
+
+
+
+
     std::vector<double> amp_t_dsrg_aa(nmo4, 0.0);
     std::vector<double> amp_t_dsrg_bb(nmo4, 0.0);
     std::vector<double> amp_t_dsrg_ab(nmo4, 0.0);
@@ -623,6 +690,36 @@ SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
             }
         }
     }
+
+
+
+
+    // std::ofstream v1;
+    // std::ofstream v2;
+    // std::ofstream v3;
+    // v1.open("trial_vaa_2.dat");
+    // v2.open("trial_vbb_2.dat");
+    // v3.open("trial_vab_2.dat");
+
+    // for (size_t p = 0; p < nmo; p++) 
+    // {
+    //     for (size_t q = 0; q < nmo; q++) 
+    //     {
+    //         for (size_t r = 0; r < nmo; r++) 
+    //         {
+    //             for (size_t s = 0; s < nmo; s++) 
+    //             {
+    //                 v1<<std::setprecision(24)<< mo_ints_aa[four_idx(p, q, r, s, nmo)]<< ' ';
+    //                 v2<<std::setprecision(24)<< mo_ints_bb[four_idx(p, q, r, s, nmo)]<< ' ';
+    //                 v3<<std::setprecision(24)<< mo_ints_ab[four_idx(p, q, r, s, nmo)]<< ' ';
+    //             }
+    //         }
+    //     }   
+    // }
+    // v1.close();
+    // v2.close();
+    // v3.close();
+
 
 
 
@@ -1260,9 +1357,11 @@ for( int times = 0; times < 100; ++times)
     std::cout << "Total Energy(DSRG-PT2):       "<< std::setprecision(15) << Escf + Edsrg_pt2 << std::endl << std::endl;
     if(gradient)
     {
-        std::cout << "DSRG Dipole_x:                "<< std::setprecision(15) << dipole_MP2_x << std::endl;
-        std::cout << "DSRG Dipole_y:                "<< std::setprecision(15) << dipole_MP2_y << std::endl;
-        std::cout << "DSRG Dipole_z:                "<< std::setprecision(15) << dipole_MP2_z << std::endl;
+        double debye = 0.393430307;
+        std::cout << "DSRG Dipole Moment_x(Debye):         "<< std::setprecision(15) << dipole_MP2_x/debye << std::endl;
+        std::cout << "DSRG Dipole Moment_y:                "<< std::setprecision(15) << dipole_MP2_y/debye << std::endl;
+        std::cout << "DSRG Dipole Moment_z:                "<< std::setprecision(15) << dipole_MP2_z/debye +1.6594 << std::endl;
+        std::cout << "DSRG Total Dipole Moment:            "<< std::setprecision(15) << sqrt(dipole_MP2_x*dipole_MP2_x+dipole_MP2_y*dipole_MP2_y+(dipole_MP2_z+1.6594*debye)*(dipole_MP2_z+1.6594*debye))/debye << std::endl;
     }
     std::cout << std::endl;
     std::cout << std::endl << std::endl << std::endl;
@@ -1271,9 +1370,330 @@ for( int times = 0; times < 100; ++times)
     {
         std::cout << i + 1 << "    " << std::setprecision(15) << epsilon[i] << std::endl;
     }
-    std::cout << "doccpi   =   " << doccpi << std::endl;
+    std::cout << "doccpi   =   " << doccpi <<" nmo   =   "<<nmo<< std::endl;
+
+
+
+
+//     std::vector<double> read_f_1(nmo2, 0.0);
+//     std::vector<double> read_f_2(nmo2, 0.0);
+//     std::vector<double> d_f(nmo2, 0.0);
+
+
+//     std::ifstream f1;
+//     std::ifstream f2;
+//     f1.open("trial_F_1.dat");
+//     f2.open("trial_F_2.dat");
+//     for(size_t i=0;i<nmo;++i){
+//         for(size_t j=0;j<nmo;++j){
+//             f1>>read_f_1[two_idx(i,j,nmo)];
+//             f2>>read_f_2[two_idx(i,j,nmo)];
+//             d_f[two_idx(i,j,nmo)]=(read_f_2[two_idx(i,j,nmo)]-read_f_1[two_idx(i,j,nmo)])/0.000001;
+        
+//         }
+//     }
+//    f1.close();
+//    f2.close();
+
+
+//     std::vector<double> read_epaa_1(nmo4, 0.0);
+//     std::vector<double> read_epaa_2(nmo4, 0.0);
+//     std::vector<double> read_epbb_1(nmo4, 0.0);
+//     std::vector<double> read_epbb_2(nmo4, 0.0);
+//     std::vector<double> read_epab_1(nmo4, 0.0);
+//     std::vector<double> read_epab_2(nmo4, 0.0);
+//     std::vector<double> d_epaa(nmo4, 0.0);
+//     std::vector<double> d_epbb(nmo4, 0.0);
+//     std::vector<double> d_epab(nmo4, 0.0);
+
+//     std::ifstream epaa1;
+//     std::ifstream epaa2;
+//     std::ifstream epbb1;
+//     std::ifstream epbb2;
+//     std::ifstream epab1;
+//     std::ifstream epab2;
+
+
+//     std::ofstream tst_epp;
+//     tst_epp.open("tst_epp.dat");
+
+
+//     epaa1.open("trial_epaa_1.dat");
+//     epaa2.open("trial_epaa_2.dat");
+//     epbb1.open("trial_epbb_1.dat");
+//     epbb2.open("trial_epbb_2.dat");
+//     epab1.open("trial_epab_1.dat");
+//     epab2.open("trial_epab_2.dat");
+//     for (size_t i = 0; i < doccpi; ++i)
+//     {
+//         for (size_t j = 0; j < doccpi; ++j)
+//         {
+//             for (size_t a = doccpi; a < nmo; ++a)
+//             {
+//                 for (size_t b = doccpi; b < nmo; ++b)
+//                 {
+//                     epaa1>>read_epaa_1[four_idx(i,j,a,b,nmo)];
+//                     epaa2>>read_epaa_2[four_idx(i,j,a,b,nmo)];
+//                     d_epaa[four_idx(i,j,a,b,nmo)]=(read_epaa_2[four_idx(i,j,a,b,nmo)]-read_epaa_1[four_idx(i,j,a,b,nmo)])/0.00000001;
+//                     tst_epp<<read_epaa_1[four_idx(i,j,a,b,nmo)]-read_epaa_2[four_idx(i,j,a,b,nmo)]<<' ';
+
+//                     epbb1>>read_epbb_1[four_idx(i,j,a,b,nmo)];
+//                     epbb2>>read_epbb_2[four_idx(i,j,a,b,nmo)];
+//                     d_epbb[four_idx(i,j,a,b,nmo)]=(read_epbb_2[four_idx(i,j,a,b,nmo)]-read_epbb_1[four_idx(i,j,a,b,nmo)])/0.00000001;
+
+//                     epab1>>read_epab_1[four_idx(i,j,a,b,nmo)];
+//                     epab2>>read_epab_2[four_idx(i,j,a,b,nmo)];
+//                     d_epab[four_idx(i,j,a,b,nmo)]=(read_epab_2[four_idx(i,j,a,b,nmo)]-read_epab_1[four_idx(i,j,a,b,nmo)])/0.00000001;
+        
+//                 }
+//             }
+//         }   
+//     }
+//    epaa1.close();
+//    epaa2.close();
+//    epbb1.close();
+//    epbb2.close();
+//    epab1.close();
+//    epab2.close();
+//    tst_epp.close();
+
+
+//     std::vector<double> read_vaa_1(nmo4, 0.0);
+//     std::vector<double> read_vaa_2(nmo4, 0.0);
+//     std::vector<double> read_vbb_1(nmo4, 0.0);
+//     std::vector<double> read_vbb_2(nmo4, 0.0);
+//     std::vector<double> read_vab_1(nmo4, 0.0);
+//     std::vector<double> read_vab_2(nmo4, 0.0);
+//     std::vector<double> d_vaa(nmo4, 0.0);
+//     std::vector<double> d_vbb(nmo4, 0.0);
+//     std::vector<double> d_vab(nmo4, 0.0);
+
+//     std::ifstream vaa1;
+//     std::ifstream vaa2;
+//     std::ifstream vbb1;
+//     std::ifstream vbb2;
+//     std::ifstream vab1;
+//     std::ifstream vab2;
+//     vaa1.open("trial_vaa_1.dat");
+//     vaa2.open("trial_vaa_2.dat");
+//     vbb1.open("trial_vbb_1.dat");
+//     vbb2.open("trial_vbb_2.dat");
+//     vab1.open("trial_vab_1.dat");
+//     vab2.open("trial_vab_2.dat");
+//     for (size_t p = 0; p < nmo; p++) 
+//     {
+//         for (size_t q = 0; q < nmo; q++) 
+//         {
+//             for (size_t r = 0; r < nmo; r++) 
+//             {
+//                 for (size_t s = 0; s < nmo; s++) 
+//                 {
+//                     vaa1>>read_vaa_1[four_idx(p, q, r, s, nmo)];
+//                     vaa2>>read_vaa_2[four_idx(p, q, r, s, nmo)];
+//                     d_vaa[four_idx(p, q, r, s, nmo)]=(read_vaa_2[four_idx(p, q, r, s, nmo)]-read_vaa_1[four_idx(p, q, r, s, nmo)])/0.00000001;
+
+//                     vbb1>>read_vbb_1[four_idx(p, q, r, s, nmo)];
+//                     vbb2>>read_vbb_2[four_idx(p, q, r, s, nmo)];
+//                     d_vbb[four_idx(p, q, r, s, nmo)]=(read_vbb_2[four_idx(p, q, r, s, nmo)]-read_vbb_1[four_idx(p, q, r, s, nmo)])/0.00000001;
+
+//                     vab1>>read_vab_1[four_idx(p, q, r, s, nmo)];
+//                     vab2>>read_vab_2[four_idx(p, q, r, s, nmo)];
+//                     d_vab[four_idx(p, q, r, s, nmo)]=(read_vab_2[four_idx(p, q, r, s, nmo)]-read_vab_1[four_idx(p, q, r, s, nmo)])/0.00000001;
+        
+//                 }
+//             }
+//         }   
+//     }
+//    vaa1.close();
+//    vaa2.close();
+//    vbb1.close();
+//    vbb2.close();
+//    vab1.close();
+//    vab2.close();
+
+
+
+
+
+
+
+
+
+
+
+// double gd=0.0;
+
+
+
+//   for(int i = frozen_c/2; i < doccpi; ++i)
+//     {
+//         for(int j = frozen_c/2; j < doccpi; ++j)
+//         {
+//             for(int a = doccpi; a < nmo - frozen_v/2; ++a)
+//             {
+//                 for(int b = doccpi; b < nmo - frozen_v/2; ++b)
+//                 {
+//                     gd += S_const*mo_ints_aa[four_idx(i,j,a,b,nmo)]*mo_ints_aa[four_idx(i,j,a,b,nmo)]*pow(e,-2.0*S_const*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)])*d_epaa[four_idx(i,j,a,b,nmo)];
+//                     gd += S_const*mo_ints_bb[four_idx(i,j,a,b,nmo)]*mo_ints_bb[four_idx(i,j,a,b,nmo)]*pow(e,-2.0*S_const*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)])*d_epbb[four_idx(i,j,a,b,nmo)];
+//                     gd += 4.0* S_const*mo_ints_ab[four_idx(i,j,a,b,nmo)]*mo_ints_ab[four_idx(i,j,a,b,nmo)]*pow(e,-2.0*S_const*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)])*d_epab[four_idx(i,j,a,b,nmo)];
+
+//                     gd += 0.5 * d_vaa[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_aa[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]));
+//                     gd += 0.5 * d_vbb[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_bb[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]));
+//                     gd += 2.0 * d_vab[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_ab[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]));
+                
+//                     gd += -0.25 * d_epaa[four_idx(i,j,a,b,nmo)]* amp_t_dsrg_aa[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_aa[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]))/(1.0-pow(e,-S_const*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]*epsilon_ijab_aa[four_idx(i,j,a,b,nmo)]));
+//                     gd += -0.25 * d_epbb[four_idx(i,j,a,b,nmo)]* amp_t_dsrg_bb[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_bb[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]))/(1.0-pow(e,-S_const*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]*epsilon_ijab_bb[four_idx(i,j,a,b,nmo)]));
+//                     gd += -1.00 * d_epab[four_idx(i,j,a,b,nmo)]* amp_t_dsrg_ab[four_idx(i,j,a,b,nmo)]*amp_t_dsrg_ab[four_idx(i,j,a,b,nmo)]*(1.0+pow(e,-S_const*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]))/(1.0-pow(e,-S_const*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]*epsilon_ijab_ab[four_idx(i,j,a,b,nmo)]));
+                    
+//                 }
+//             }
+//         }
+//     }
+
+
+
+
+
+// std::cout<<std::endl<<gd<<std::endl<<std::endl;
+
+
+
+
+
+
+
+
+
+
+
+
+    /***********************************************************************/
+    /*                                                                     */     
+    /*                                                                     */ 
+    /*                             write 2-rdm                             */ 
+    /*                                                                     */ 
+    /*                                                                     */ 
+    /***********************************************************************/   
+
+    std::shared_ptr<PSIO> psio (new PSIO());
+    // std::shared_ptr<PSIO> psio= ref_wfn->psio();
+    // auto psio = _default_psio_lib_;
+
+    IWL d2aa(psio.get(), PSIF_MO_AA_TPDM, 1.0e-14, 0, 0);
+    IWL d2ab(psio.get(), PSIF_MO_AB_TPDM, 1.0e-14, 0, 0);
+    IWL d2bb(psio.get(), PSIF_MO_BB_TPDM, 1.0e-14, 0, 0);
+
+
+  for(int i = 0; i < doccpi; ++i)
+    {
+        for(int j = 0; j < doccpi; ++j)
+        {  
+            d2aa.write_value(i, i, j, j, 10, 0, "NULL", 0);
+            d2bb.write_value(i, i, j, j, 10, 0, "NULL", 0); 
+            d2ab.write_value(i, i, j, j, 10, 0, "NULL", 0); 
+        }
+    }    
+
+
+
+   
+    d2aa.flush(1);
+    d2bb.flush(1);
+    d2ab.flush(1);
+
+    d2aa.set_keep_flag(1);
+    d2bb.set_keep_flag(1);
+    d2ab.set_keep_flag(1);
+
+    d2aa.close();
+    d2bb.close();
+    d2ab.close();
+
+
+    /***********************************************************************/
+    /*                                                                     */     
+    /*                                                                     */ 
+    /*                        backtransform the tpdm                       */ 
+    /*                                                                     */ 
+    /*                                                                     */ 
+    /***********************************************************************/  
+
+
+
+    //double energy = v2rdm->compute_energy();
+
+    //Process::environment.globals["CURRENT ENERGY"] = energy;
+
+    //if ( options.get_str("DERTYPE") == "FIRST" ) {
+        // backtransform the tpdm
+
+
+
+
+
+        std::vector<std::shared_ptr<MOSpace> > spaces;
+        spaces.push_back(MOSpace::all);
+        std::shared_ptr<TPDMBackTransform> transform = std::shared_ptr<TPDMBackTransform>(
+        new TPDMBackTransform(ref_wfn,
+                        spaces,
+                        IntegralTransform::TransformationType::Unrestricted, // Transformation type
+                        IntegralTransform::OutputType::DPDOnly,              // Output buffer
+                        IntegralTransform::MOOrdering::QTOrder,              // MO ordering
+                        IntegralTransform::FrozenOrbitals::None));           // Frozen orbitals?
+        transform->backtransform_density();
+        transform.reset();
+   
+
+
+
+
+    //}
+
+
+
+
+
+
+    ref_wfn->Da()->zero();
+    for (int p=0; p < doccpi; ++p)
+    {
+        ref_wfn->Da()->set(0,p,p,1.0);
+    }
+    ref_wfn->Da()->print();
+    ref_wfn->Da()->back_transform(C_a);
+    ref_wfn->Db()->copy(ref_wfn->Da());
+    ref_wfn->X()->print();
+
+
+    ref_wfn->Lagrangian()->copy(F_MO);
+     ref_wfn->Lagrangian()->Matrix::scale(1.0);
+    for (int p=doccpi; p < nmo; ++p)
+    {
+        ref_wfn->Lagrangian()->set(0,p,p,0);
+    }
+
+    ref_wfn->Lagrangian()->print();
+    ref_wfn->Lagrangian()->back_transform(C_a);
+    ref_wfn->Lagrangian()->print();
+
+   
+
+
+    
+
+
+
+F_MO->print();
+
+
+
     return ref_wfn;
+
+
+
+
 }
 }
+
 } // End namespaces
 

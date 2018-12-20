@@ -7,33 +7,80 @@ import scf_plug
 
 
 
-molecule h2o {
-0 1
-O
-H 1 r
-H 1 r 2 a
 
-r=0.98944
-a=100.047
+
+
+
+
+#molecule h2 {
+#0 1
+#symmetry c1
+#H 0.00000000 0.00000000 0.365
+#H 0.00000000 0.00000000 -0.365
+#}
+
+
+molecule hf {
+0 1
+symmetry c1
+H 0.00000000 0.00000000 -0.455
+f 0.00000000 0.00000000 0.455
 }
+
+
+
+#molecule h2o {
+#0 1
+#symmetry c1
+#O 0.00000000 0.00000000 0.00000000
+#H 0.00000000 0.75410300 -0.56492300
+#H 0.00000000 -0.75410300 -0.56492300
+#}
+
+
+#molecule nh3 {
+#0  1 
+#symmetry c1
+#N  0.000  0.000  -0.280
+#H -0.599 0.730    0.093
+#H  0.932   0.154   0.093
+#H -0.332 -0.884   0.093
+#}
+
 
 set {
   basis sto-3g
  scf_type pk
  mp2_type conv
+ e_convergence 15
+ d_convergence 10
+ perturb_h true
+ perturb_with dipole
+perturb_dipole [0,0,0]
 }
 
 set scf_plug {
-  print 1
-  cvg   1.0e-12
-  pert  0.00
-  s     1.8
+  print                 1
+  cvg                   1.0e-15
+  pert                  0.00000000001
+  pert_direction        2    
+  s                     0.042
+  frozen_core           0
+  frozen_virtual        0
+  gradient              1
 }
 
 energy('scf_plug')
-Emp2= energy('mp2')
-Escf= energy('scf')
 
-print Escf
-print Emp2
+
+# Emp2= energy('mp2')
+# Escf= energy('scf')
+set print 4
+gd = gradient('scf')
+
+
+# print(Escf)
+# print(Emp2)
+
+
 scf_plug.exampleFN()

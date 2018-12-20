@@ -1,6 +1,6 @@
 sys.path.insert(0, './..')
 import dsrgpt2_plug
-
+print 'dasdasdadas' , dsrgpt2_plug.__file__
 
 molecule h2o {
 0 1

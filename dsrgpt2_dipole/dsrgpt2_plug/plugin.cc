@@ -37,6 +37,8 @@
 #include "psi4/libtrans/integraltransform.h"
 #include "psi4/psi4-dec.h"
 #include "psi4/psifiles.h"
+#include "psi4/libmints/dipole.h"
+
 
 #include <math.h>
 
@@ -49,6 +51,7 @@ double ss=5000;
 namespace psi {
 namespace dsrgpt2_plug {
 
+
 extern "C" int read_options(std::string name, Options& options) {
     if (name == "dsrgpt2_plug" || options.read_globals()) {
         /*- The amount of information printed
@@ -58,6 +61,24 @@ extern "C" int read_options(std::string name, Options& options) {
 
     return true;
 }
+
+void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp) {
+
+    std::shared_ptr<BasisSet> basisset = wfn->basisset();
+    std::shared_ptr<IntegralFactory> ints_fac = std::make_shared<IntegralFactory>(basisset);
+    int nbf = basisset->nbf();
+
+    std::vector<SharedMatrix> AOdipole_ints_;
+    // AOdipole_ints_.clear();
+    for (const std::string& direction : {"X", "Y", "Z"}) {
+        std::string name = "AO Dipole " + direction;
+        AOdipole_ints_.push_back(SharedMatrix(new Matrix(name, nbf, nbf)));
+    }
+    std::shared_ptr<OneBodyAOInt> aodOBI(ints_fac->ao_dipole());
+    aodOBI->compute(AOdipole_ints_);
+    Dp->copy(AOdipole_ints_[2]);
+}
+
 
 extern "C" SharedWavefunction dsrgpt2_plug(SharedWavefunction ref_wfn, Options& options) {
     /*
@@ -221,6 +242,8 @@ extern "C" SharedWavefunction dsrgpt2_plug(SharedWavefunction ref_wfn, Options& 
         }
     }
 
+    std::cout << "what";
+
     double rhf_energy = ref_wfn->reference_energy();
 
     outfile->Printf("\n\n    ==> Spin orbital SR_DSRG_PT2 energy <==\n");
@@ -229,6 +252,37 @@ extern "C" SharedWavefunction dsrgpt2_plug(SharedWavefunction ref_wfn, Options& 
     outfile->Printf("    SR_DSRG_PT2 total energy      %20.12f\n", rhf_energy + mp2_energy);
 
     Process::environment.globals["CURRENT ENERGY"] = rhf_energy + mp2_energy;
+
+//***************************************************
+  
+//     SharedMatrix Dp (new Matrix("Dipole correction matrix", 1, 7, 7, 0));  
+//     build_AOdipole_ints(ref_wfn, Dp);
+//     double dipole_energy = 0.0;
+
+//     for(int i : O){
+//         dipole_energy += Dp->get(0,i,i);
+//     }
+
+//     for (int i : O) {
+//         for (int j : O) {
+//             for (int a : V) {
+//                 for (int b : V) {
+//                     double Vijab = so_ints[four_idx(i, j, a, b, nso)];
+//                     double Muijab = Dp->get(0,a,a) + Dp->get(0,b,b) - Dp->get(0,i,i) - Dp->get(0,j,j);
+//                     dipole_energy += 0.25 * Vijab * Vijab / Muijab  ;
+//                 }
+//             }
+//         }
+//     }
+
+// std::cout << dipole_energy;
+std::cout << "what";
+
+
+
+
+
+//***************************************************
 
     return ref_wfn;
 }

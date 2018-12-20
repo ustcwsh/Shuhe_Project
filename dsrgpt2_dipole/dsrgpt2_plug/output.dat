@@ -18,9 +18,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Monday, 28 May 2018 07:12PM
+    Psi4 started on: Wednesday, 30 May 2018 03:14PM
 
-    Process ID:  18310
+    Process ID:    789
     PSIDATADIR: /Users/shuhe.wang/src/psi4_debug_install/share/psi4
     Memory:     500.0 MiB
     Threads:    1
@@ -30,7 +30,7 @@
 --------------------------------------------------------------------------
 sys.path.insert(0, './..')
 import dsrgpt2_plug
-
+print 'dasdasdadas' , dsrgpt2_plug.__file__
 
 molecule h2o {
 0 1
@@ -66,7 +66,7 @@ dm_z_5point = (8.0*energies[0] - 8.0*energies[1] - energies[2] + energies[3]) / 
 
 set perturb_h false
 # Compute the analytic dipoles, for comparison
-e,wfn = energy('scf', return_wfn=True)
+e,wfn = energy('dsrgpt2_plug', return_wfn=True)
 oeprop(wfn, "MULTIPOLES(1)")
 analytic = get_variable("DIPOLE Z")
 
@@ -79,10 +79,10 @@ print_out("Total dipoles\n")
 print_out("3 Point formula: mu(z) = %10.6f ea0, %10.6f Debye\n" % (dm_z_3point, dm_z_3point*psi_dipmom_au2debye))
 print_out("5 Point formula: mu(z) = %10.6f ea0, %10.6f Debye\n" % (dm_z_5point, dm_z_5point*psi_dipmom_au2debye))
 --------------------------------------------------------------------------
-/Users/shuhe.wang/src/plug/dsrgpt2_plug/dsrgpt2_plug.so loaded.
+/Users/shuhe.wang/src/plug/dsrgpt2_git/dsrgpt2_dipole/dsrgpt2_plug/dsrgpt2_plug.so loaded.
 
 *** tstart() called on Shuhe.Wang
-*** at Mon May 28 19:12:45 2018
+*** at Wed May 30 15:14:33 2018
 
    => Loading Basis Set <=
 
@@ -197,14 +197,14 @@ print_out("5 Point formula: mu(z) = %10.6f ea0, %10.6f Debye\n" % (dm_z_5point, 
                         Total Energy        Delta E     RMS |[F,P]|
 
    @RHF iter   0:   -74.73206294757530   -7.47321e+01   3.06685e-01 
-   @RHF iter   1:   -74.91352937280789   -1.81466e-01   5.30687e-02 
-   @RHF iter   2:   -74.96308805653098   -4.95587e-02   9.54572e-03 DIIS
+   @RHF iter   1:   -74.91352937280787   -1.81466e-01   5.30687e-02 
+   @RHF iter   2:   -74.96308805653099   -4.95587e-02   9.54572e-03 DIIS
    @RHF iter   3:   -74.96481395214232   -1.72590e-03   3.55043e-03 DIIS
-   @RHF iter   4:   -74.96522704609663   -4.13094e-04   3.49214e-04 DIIS
-   @RHF iter   5:   -74.96523003694089   -2.99084e-06   3.59480e-05 DIIS
-   @RHF iter   6:   -74.96523006182005   -2.48792e-08   6.11946e-07 DIIS
-   @RHF iter   7:   -74.96523006182591   -5.85487e-12   1.37271e-08 DIIS
-   @RHF iter   8:   -74.96523006182592   -1.42109e-14   1.07398e-10 DIIS
+   @RHF iter   4:   -74.96522704609657   -4.13094e-04   3.49214e-04 DIIS
+   @RHF iter   5:   -74.96523003694087   -2.99084e-06   3.59480e-05 DIIS
+   @RHF iter   6:   -74.96523006182008   -2.48792e-08   6.11946e-07 DIIS
+   @RHF iter   7:   -74.96523006182591   -5.82645e-12   1.37271e-08 DIIS
+   @RHF iter   8:   -74.96523006182591    0.00000e+00   1.07400e-10 DIIS
 
   ==> Post-Iterations <==
 
@@ -226,14 +226,14 @@ print_out("5 Point formula: mu(z) = %10.6f ea0, %10.6f Debye\n" % (dm_z_5point, 
 
   Energy converged.
 
-  @RHF Final Energy:   -74.96523006182592 with 0.000000 0.000000 0.001000 perturbation
+  @RHF Final Energy:   -74.96523006182591 with 0.000000 0.000000 0.001000 perturbation
 
    => Energetics <=
 
     Nuclear Repulsion Energy =              8.9072196415584965
-    One-Electron Energy =                -121.8282602522897946
-    Two-Electron Energy =                  37.9558105489053688
-    Total Energy =                        -74.9652300618259346
+    One-Electron Energy =                -121.8282602522897378
+    Two-Electron Energy =                  37.9558105489053332
+    Total Energy =                        -74.9652300618259062
 
 
 
@@ -254,15 +254,15 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:     1.7025     Total:     1.7025
 
 
-*** tstop() called on Shuhe.Wang at Mon May 28 19:12:46 2018
+*** tstop() called on Shuhe.Wang at Wed May 30 15:14:33 2018
 Module time:
-	user time   =       0.30 seconds =       0.01 minutes
+	user time   =       0.27 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.30 seconds =       0.01 minutes
+	user time   =       0.27 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	total time  =          0 seconds =       0.00 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
 
@@ -308,7 +308,7 @@ Calling plugin dsrgpt2_plug.so.
     SR_DSRG_PT2 total energy          -74.663800710519
 
 *** tstart() called on Shuhe.Wang
-*** at Mon May 28 19:12:46 2018
+*** at Wed May 30 15:14:33 2018
 
    => Loading Basis Set <=
 
@@ -423,14 +423,14 @@ Calling plugin dsrgpt2_plug.so.
                         Total Energy        Delta E     RMS |[F,P]|
 
    @RHF iter   0:   -74.73206294757533   -7.47321e+01   3.06763e-01 
-   @RHF iter   1:   -74.91486020560396   -1.82797e-01   5.31340e-02 
-   @RHF iter   2:   -74.96445559414032   -4.95954e-02   9.51229e-03 DIIS
-   @RHF iter   3:   -74.96616489010292   -1.70930e-03   3.52857e-03 DIIS
-   @RHF iter   4:   -74.96657186422351   -4.06974e-04   3.47112e-04 DIIS
+   @RHF iter   1:   -74.91486020560393   -1.82797e-01   5.31340e-02 
+   @RHF iter   2:   -74.96445559414030   -4.95954e-02   9.51229e-03 DIIS
+   @RHF iter   3:   -74.96616489010296   -1.70930e-03   3.52857e-03 DIIS
+   @RHF iter   4:   -74.96657186422350   -4.06974e-04   3.47112e-04 DIIS
    @RHF iter   5:   -74.96657481964064   -2.95542e-06   3.55189e-05 DIIS
-   @RHF iter   6:   -74.96657484387710   -2.42365e-08   6.25082e-07 DIIS
-   @RHF iter   7:   -74.96657484388321   -6.11067e-12   1.21684e-08 DIIS
-   @RHF iter   8:   -74.96657484388325   -4.26326e-14   1.08997e-10 DIIS
+   @RHF iter   6:   -74.96657484387708   -2.42364e-08   6.25082e-07 DIIS
+   @RHF iter   7:   -74.96657484388325   -6.16751e-12   1.21684e-08 DIIS
+   @RHF iter   8:   -74.96657484388321    4.26326e-14   1.08997e-10 DIIS
 
   ==> Post-Iterations <==
 
@@ -452,14 +452,14 @@ Calling plugin dsrgpt2_plug.so.
 
   Energy converged.
 
-  @RHF Final Energy:   -74.96657484388325 with 0.000000 0.000000 -0.001000 perturbation
+  @RHF Final Energy:   -74.96657484388321 with 0.000000 0.000000 -0.001000 perturbation
 
    => Energetics <=
 
     Nuclear Repulsion Energy =              8.9051033473834114
-    One-Electron Energy =                -121.8390825330706093
-    Two-Electron Energy =                  37.9674043418039417
-    Total Energy =                        -74.9665748438832509
+    One-Electron Energy =                -121.8390825330705951
+    Two-Electron Energy =                  37.9674043418039631
+    Total Energy =                        -74.9665748438832225
 
 
 
@@ -480,15 +480,15 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:     1.7156     Total:     1.7156
 
 
-*** tstop() called on Shuhe.Wang at Mon May 28 19:12:46 2018
+*** tstop() called on Shuhe.Wang at Wed May 30 15:14:33 2018
 Module time:
-	user time   =       0.27 seconds =       0.00 minutes
-	system time =       0.02 seconds =       0.00 minutes
+	user time   =       0.26 seconds =       0.00 minutes
+	system time =       0.01 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.61 seconds =       0.01 minutes
-	system time =       0.05 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	user time   =       0.58 seconds =       0.01 minutes
+	system time =       0.04 seconds =       0.00 minutes
+	total time  =          0 seconds =       0.00 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
 
@@ -531,10 +531,10 @@ Calling plugin dsrgpt2_plug.so.
     ==> Spin orbital SR_DSRG_PT2 energy <==
     RHF total energy                  -74.966574843883
     SR_PT2 correlation energy           0.304782135425
-    SR_DSRG_PT2 total energy          -74.661792708458
+    SR_DSRG_PT2 total energy          -74.661792708459
 
 *** tstart() called on Shuhe.Wang
-*** at Mon May 28 19:12:46 2018
+*** at Wed May 30 15:14:33 2018
 
    => Loading Basis Set <=
 
@@ -648,15 +648,15 @@ Calling plugin dsrgpt2_plug.so.
 
                         Total Energy        Delta E     RMS |[F,P]|
 
-   @RHF iter   0:   -74.73206294757530   -7.47321e+01   3.06646e-01 
+   @RHF iter   0:   -74.73206294757533   -7.47321e+01   3.06646e-01 
    @RHF iter   1:   -74.91286769918956   -1.80805e-01   5.30359e-02 
-   @RHF iter   2:   -74.96240804705849   -4.95403e-02   9.56246e-03 DIIS
-   @RHF iter   3:   -74.96414230274260   -1.73426e-03   3.56140e-03 DIIS
-   @RHF iter   4:   -74.96455848848970   -4.16186e-04   3.50269e-04 DIIS
+   @RHF iter   2:   -74.96240804705855   -4.95403e-02   9.56246e-03 DIIS
+   @RHF iter   3:   -74.96414230274267   -1.73426e-03   3.56140e-03 DIIS
+   @RHF iter   4:   -74.96455848848967   -4.16186e-04   3.50269e-04 DIIS
    @RHF iter   5:   -74.96456149717216   -3.00868e-06   3.61646e-05 DIIS
-   @RHF iter   6:   -74.96456152237931   -2.52072e-08   6.04287e-07 DIIS
-   @RHF iter   7:   -74.96456152238495   -5.64171e-12   1.43971e-08 DIIS
-   @RHF iter   8:   -74.96456152238497   -1.42109e-14   1.06966e-10 DIIS
+   @RHF iter   6:   -74.96456152237927   -2.52071e-08   6.04287e-07 DIIS
+   @RHF iter   7:   -74.96456152238494   -5.67013e-12   1.43971e-08 DIIS
+   @RHF iter   8:   -74.96456152238497   -2.84217e-14   1.06966e-10 DIIS
 
   ==> Post-Iterations <==
 
@@ -683,8 +683,8 @@ Calling plugin dsrgpt2_plug.so.
    => Energetics <=
 
     Nuclear Repulsion Energy =              8.9082777886460374
-    One-Electron Energy =                -121.8228489148361717
-    Two-Electron Energy =                  37.9500096038051709
+    One-Electron Energy =                -121.8228489148361859
+    Two-Electron Energy =                  37.9500096038051780
     Total Energy =                        -74.9645615223849688
 
 
@@ -706,14 +706,14 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:     1.6960     Total:     1.6960
 
 
-*** tstop() called on Shuhe.Wang at Mon May 28 19:12:46 2018
+*** tstop() called on Shuhe.Wang at Wed May 30 15:14:34 2018
 Module time:
-	user time   =       0.27 seconds =       0.00 minutes
+	user time   =       0.26 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
-	total time  =          0 seconds =       0.00 minutes
+	total time  =          1 seconds =       0.02 minutes
 Total time:
-	user time   =       0.92 seconds =       0.02 minutes
-	system time =       0.08 seconds =       0.00 minutes
+	user time   =       0.89 seconds =       0.01 minutes
+	system time =       0.07 seconds =       0.00 minutes
 	total time  =          1 seconds =       0.02 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
@@ -760,7 +760,7 @@ Calling plugin dsrgpt2_plug.so.
     SR_DSRG_PT2 total energy          -74.664805351259
 
 *** tstart() called on Shuhe.Wang
-*** at Mon May 28 19:12:46 2018
+*** at Wed May 30 15:14:34 2018
 
    => Loading Basis Set <=
 
@@ -874,15 +874,15 @@ Calling plugin dsrgpt2_plug.so.
 
                         Total Energy        Delta E     RMS |[F,P]|
 
-   @RHF iter   0:   -74.73206294757533   -7.47321e+01   3.06802e-01 
+   @RHF iter   0:   -74.73206294757530   -7.47321e+01   3.06802e-01 
    @RHF iter   1:   -74.91552936029093   -1.83466e-01   5.31664e-02 
-   @RHF iter   2:   -74.96514311472870   -4.96138e-02   9.49559e-03 DIIS
-   @RHF iter   3:   -74.96684417066271   -1.70106e-03   3.51768e-03 DIIS
+   @RHF iter   2:   -74.96514311472868   -4.96138e-02   9.49559e-03 DIIS
+   @RHF iter   3:   -74.96684417066265   -1.70106e-03   3.51768e-03 DIIS
    @RHF iter   4:   -74.96724811651730   -4.03946e-04   3.46065e-04 DIIS
    @RHF iter   5:   -74.96725105434524   -2.93783e-06   3.53064e-05 DIIS
-   @RHF iter   6:   -74.96725107826681   -2.39216e-08   6.30551e-07 DIIS
-   @RHF iter   7:   -74.96725107827309   -6.28120e-12   1.12477e-08 DIIS
-   @RHF iter   8:   -74.96725107827308    1.42109e-14   1.10341e-10 DIIS
+   @RHF iter   6:   -74.96725107826680   -2.39216e-08   6.30551e-07 DIIS
+   @RHF iter   7:   -74.96725107827314   -6.33804e-12   1.12477e-08 DIIS
+   @RHF iter   8:   -74.96725107827307    7.10543e-14   1.10340e-10 DIIS
 
   ==> Post-Iterations <==
 
@@ -904,14 +904,14 @@ Calling plugin dsrgpt2_plug.so.
 
   Energy converged.
 
-  @RHF Final Energy:   -74.96725107827308 with 0.000000 0.000000 -0.002000 perturbation
+  @RHF Final Energy:   -74.96725107827307 with 0.000000 0.000000 -0.002000 perturbation
 
    => Energetics <=
 
     Nuclear Repulsion Energy =              8.9040452002958705
-    One-Electron Energy =                -121.8444934671699542
-    Two-Electron Energy =                  37.9731971886009916
-    Total Energy =                        -74.9672510782730939
+    One-Electron Energy =                -121.8444934671699116
+    Two-Electron Energy =                  37.9731971886009774
+    Total Energy =                        -74.9672510782730654
 
 
 
@@ -932,15 +932,15 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:     1.7221     Total:     1.7221
 
 
-*** tstop() called on Shuhe.Wang at Mon May 28 19:12:47 2018
+*** tstop() called on Shuhe.Wang at Wed May 30 15:14:34 2018
 Module time:
-	user time   =       0.28 seconds =       0.00 minutes
+	user time   =       0.27 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       1.24 seconds =       0.02 minutes
-	system time =       0.11 seconds =       0.00 minutes
-	total time  =          2 seconds =       0.03 minutes
+	user time   =       1.20 seconds =       0.02 minutes
+	system time =       0.10 seconds =       0.00 minutes
+	total time  =          1 seconds =       0.02 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
 
@@ -986,7 +986,7 @@ Calling plugin dsrgpt2_plug.so.
     SR_DSRG_PT2 total energy          -74.660789993431
 
 *** tstart() called on Shuhe.Wang
-*** at Mon May 28 19:12:47 2018
+*** at Wed May 30 15:14:34 2018
 
    => Loading Basis Set <=
 
@@ -1038,7 +1038,7 @@ Calling plugin dsrgpt2_plug.so.
   Fractional occupation disabled.
   Guess Type is SAD.
   Energy threshold   = 1.00e-10
-  Density threshold  = 1.00e-06
+  Density threshold  = 1.00e-08
   Integral threshold = 0.00e+00
 
   ==> Primary Basis <==
@@ -1100,13 +1100,14 @@ Calling plugin dsrgpt2_plug.so.
                         Total Energy        Delta E     RMS |[F,P]|
 
    @RHF iter   0:   -74.73206294757533   -7.47321e+01   3.06724e-01 
-   @RHF iter   1:   -74.91419354236253   -1.82131e-01   5.31014e-02 
-   @RHF iter   2:   -74.96377057348512   -4.95770e-02   9.52900e-03 DIIS
+   @RHF iter   1:   -74.91419354236248   -1.82131e-01   5.31014e-02 
+   @RHF iter   2:   -74.96377057348509   -4.95770e-02   9.52900e-03 DIIS
    @RHF iter   3:   -74.96548814926487   -1.71758e-03   3.53948e-03 DIIS
-   @RHF iter   4:   -74.96589817271453   -4.10023e-04   3.48162e-04 DIIS
-   @RHF iter   5:   -74.96590114580377   -2.97309e-06   3.57328e-05 DIIS
+   @RHF iter   4:   -74.96589817271447   -4.10023e-04   3.48162e-04 DIIS
+   @RHF iter   5:   -74.96590114580374   -2.97309e-06   3.57328e-05 DIIS
    @RHF iter   6:   -74.96590117035933   -2.45556e-08   6.18879e-07 DIIS
-   @RHF iter   7:   -74.96590117036534   -6.01119e-12   1.29890e-08 DIIS
+   @RHF iter   7:   -74.96590117036533   -5.99698e-12   1.29890e-08 DIIS
+   @RHF iter   8:   -74.96590117036534   -1.42109e-14   1.08052e-10 DIIS
 
   ==> Post-Iterations <==
 
@@ -1133,9 +1134,9 @@ Calling plugin dsrgpt2_plug.so.
    => Energetics <=
 
     Nuclear Repulsion Energy =              8.9061614944709540
-    One-Electron Energy =                -121.8336711764624027
-    Two-Electron Energy =                  37.9616085116261033
-    Total Energy =                        -74.9659011703653562
+    One-Electron Energy =                -121.8336714599090413
+    Two-Electron Energy =                  37.9616087950727490
+    Total Energy =                        -74.9659011703653420
 
 
 
@@ -1156,15 +1157,57 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:     1.7090     Total:     1.7090
 
 
-*** tstop() called on Shuhe.Wang at Mon May 28 19:12:47 2018
+*** tstop() called on Shuhe.Wang at Wed May 30 15:14:34 2018
 Module time:
-	user time   =       0.26 seconds =       0.00 minutes
-	system time =       0.01 seconds =       0.00 minutes
+	user time   =       0.25 seconds =       0.00 minutes
+	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       1.55 seconds =       0.03 minutes
+	user time   =       1.49 seconds =       0.02 minutes
 	system time =       0.13 seconds =       0.00 minutes
-	total time  =          2 seconds =       0.03 minutes
+	total time  =          1 seconds =       0.02 minutes
+ MINTS: Wrapper to libmints.
+   by Justin Turney
+
+   Calculation information:
+      Number of threads:                 1
+      Number of atoms:                   3
+      Number of AO shells:               5
+      Number of SO shells:               4
+      Number of primitives:             15
+      Number of atomic orbitals:         7
+      Number of basis functions:         7
+
+      Number of irreps:                  4
+      Integral cutoff                 0.00e+00
+      Number of functions per irrep: [   4    0    1    2 ]
+
+ OEINTS: Overlap, kinetic, potential, dipole, and quadrupole integrals
+         stored in file 35.
+
+      Computing two-electron integrals...done
+      Computed 138 non-zero two-electron integrals.
+        Stored in file 33.
+
+
+Reading options from the DSRGPT2_PLUG block
+Calling plugin dsrgpt2_plug.so.
+
+
+	Presorting SO-basis two-electron integrals.
+	Sorting File: SO Ints (nn|nn) nbuckets = 1
+	Transforming the one-electron integrals and constructing Fock matrices
+	Starting first half-transformation.
+	Sorting half-transformed integrals.
+	First half integral transformation complete.
+	Starting second half-transformation.
+	Two-electron integral transformation complete.
+
+
+    ==> Spin orbital SR_DSRG_PT2 energy <==
+    RHF total energy                  -74.965901170365
+    SR_PT2 correlation energy           0.303104780613
+    SR_DSRG_PT2 total energy          -74.662796389752
 
 
 Properties will be evaluated at   0.000000,   0.000000,   0.000000 Bohr
