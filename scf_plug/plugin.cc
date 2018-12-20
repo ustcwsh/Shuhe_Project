@@ -307,7 +307,7 @@ void build_AOdipole_ints(SharedWavefunction wfn, SharedMatrix Dp, int direction)
 }
 
 extern "C" PSI_API
-SharedWavefunction scf_plug(SharedWavefunction ref_wfn, Options& options)
+SharedWavefunction scf_plug(SharedWavefunction& ref_wfn, Options& options)
 {
 
     //Parameters Declaration
