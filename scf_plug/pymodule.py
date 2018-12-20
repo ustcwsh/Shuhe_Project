@@ -54,7 +54,7 @@ def run_scf_plug(name, **kwargs):
 
 
     # Ensure IWL files have been written when not using DF/CD
-    proc_util.check_iwl_file_from_scf_type(psi4.core.get_option('SCF', 'SCF_TYPE'), ref_wfn)
+    # proc_util.check_iwl_file_from_scf_type(psi4.core.get_option('SCF', 'SCF_TYPE'), ref_wfn)
 
     # analytic derivatives do not work with scf_type df/cd
     scf_type = psi4.core.get_option('SCF', 'SCF_TYPE')
@@ -65,7 +65,8 @@ def run_scf_plug(name, **kwargs):
     # Please note that setting the reference wavefunction in this way is ONLY for plugins
 
     scf_plug_wfn = psi4.core.plugin('scf_plug.so', ref_wfn)
-
+    print(scf_plug_wfn)
+    print(ref_wfn)
 
     derivobj = psi4.core.Deriv(scf_plug_wfn)
     derivobj.set_deriv_density_backtransformed(True)
@@ -77,7 +78,7 @@ def run_scf_plug(name, **kwargs):
 
    
 
-    ref_wfn.set_gradient(grad)
+    scf_plug_wfn.set_gradient(grad)
 
     return scf_plug_wfn
 

@@ -1575,10 +1575,13 @@ for( int times = 0; times < 100; ++times)
     /*                                                                     */ 
     /***********************************************************************/   
 
-    std::shared_ptr<PSIO> psio (new PSIO());
+    // std::shared_ptr<PSIO> psio (new PSIO());
     // std::shared_ptr<PSIO> psio= ref_wfn->psio();
-    // auto psio = _default_psio_lib_;
+    auto psio = _default_psio_lib_;
 
+
+    psio->open(PSIF_AO_TPDM,PSIO_OPEN_OLD);
+    psio->close(PSIF_AO_TPDM,0);
     IWL d2aa(psio.get(), PSIF_MO_AA_TPDM, 1.0e-14, 0, 0);
     IWL d2ab(psio.get(), PSIF_MO_AB_TPDM, 1.0e-14, 0, 0);
     IWL d2bb(psio.get(), PSIF_MO_BB_TPDM, 1.0e-14, 0, 0);
@@ -1588,9 +1591,9 @@ for( int times = 0; times < 100; ++times)
     {
         for(int j = 0; j < doccpi; ++j)
         {  
-            d2aa.write_value(i, i, j, j, 10, 0, "NULL", 0);
-            d2bb.write_value(i, i, j, j, 10, 0, "NULL", 0); 
-            d2ab.write_value(i, i, j, j, 10, 0, "NULL", 0); 
+            d2aa.write_value(i, i, j, j, 0.0, 0, "NULL", 0);
+            d2bb.write_value(i, i, j, j, 0.0, 0, "NULL", 0); 
+            d2ab.write_value(i, i, j, j, 0.0, 0, "NULL", 0); 
         }
     }    
 
