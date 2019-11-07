@@ -1,4 +1,1 @@
-# SR_DSRG_PT2_plugin
-# SCF_plugin
-
-DSRG-PT2 plugin is in the SCF file
+I haven’t updated progress here since it's not a twitter playground, not because I am slack.
